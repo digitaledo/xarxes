@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#2c6496">
     <title>eDoActiu - Gestor/a de xarxes escolars</title>
     <link rel="manifest" id="dynamic-manifest">
+    <link rel="apple-touch-icon" href="logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -182,14 +183,15 @@
         }
 
         function initPWA() {
+            const fullIconUrl = new URL("logo.png", window.location.href).href;
             const manifestData = {
                 name: "eDoActiu Xarxes",
                 short_name: "eDoActiu",
-                start_url: location.href,
+                start_url: window.location.href,
                 display: "standalone",
                 background_color: "#f8fafc",
                 theme_color: "#2c6496",
-                icons: [{ src: "logo.png", sizes: "512x512", type: "image/png" }]
+                icons: [{ src: fullIconUrl, sizes: "512x512", type: "image/png" }]
             };
             const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
             document.getElementById('dynamic-manifest').href = URL.createObjectURL(blob);
