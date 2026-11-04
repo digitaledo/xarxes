@@ -46,7 +46,7 @@
                 </div>
             </div>
             
-            <div id="navButtons" class="hidden flex bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
+            <div id="navButtons" class="hidden bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
                 <button id="btnRoleTeacher" onclick="showView('teacher')" class="flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">👨‍🏫 Mestre/a</button>
                 <button id="btnRoleManager" onclick="showView('manager')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor/a</button>
             </div>
@@ -185,7 +185,7 @@
             const manifestData = {
                 name: "eDoActiu Xarxes",
                 short_name: "eDoActiu",
-                start_url: ".",
+                start_url: location.href,
                 display: "standalone",
                 background_color: "#f8fafc",
                 theme_color: "#2c6496",
@@ -193,6 +193,13 @@
             };
             const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
             document.getElementById('dynamic-manifest').href = URL.createObjectURL(blob);
+
+            const swCode = `self.addEventListener('fetch', function(e) {});`;
+            const swBlob = new Blob([swCode], {type: 'text/javascript'});
+            const swUrl = URL.createObjectURL(swBlob);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -228,15 +235,15 @@
                 userRole = 'teacher';
                 document.getElementById('appPassword').value = '';
                 document.getElementById('loginError').classList.add('hidden');
-                document.getElementById('navButtons').classList.remove('hidden');
-                document.getElementById('btnRoleManager').classList.add('hidden');
+                document.getElementById('navButtons').classList.remove('flex');
+                document.getElementById('navButtons').classList.add('hidden');
                 showView('teacher');
             } else if (hashed === hashM) {
                 userRole = 'manager';
                 document.getElementById('appPassword').value = '';
                 document.getElementById('loginError').classList.add('hidden');
                 document.getElementById('navButtons').classList.remove('hidden');
-                document.getElementById('btnRoleManager').classList.remove('hidden');
+                document.getElementById('navButtons').classList.add('flex');
                 showView('manager');
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
@@ -250,18 +257,23 @@
             document.getElementById('view-login').classList.add('hidden');
             document.getElementById('view-teacher').classList.add('hidden');
             document.getElementById('view-manager').classList.add('hidden');
-            const btnT = document.getElementById('btnRoleTeacher');
-            const btnM = document.getElementById('btnRoleManager');
-
-            if (viewName === 'teacher') {
-                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
-                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
+            
+            if (userRole === 'manager') {
+                const btnT = document.getElementById('btnRoleTeacher');
+                const btnM = document.getElementById('btnRoleManager');
+                
+                if (viewName === 'teacher') {
+                    btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                    btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
+                    document.getElementById('view-teacher').classList.remove('hidden');
+                } else if (viewName === 'manager') {
+                    btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                    btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
+                    document.getElementById('view-manager').classList.remove('hidden');
+                    resetPaginationAndLoad();
+                }
+            } else if (userRole === 'teacher') {
                 document.getElementById('view-teacher').classList.remove('hidden');
-            } else if (viewName === 'manager') {
-                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
-                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
-                document.getElementById('view-manager').classList.remove('hidden');
-                resetPaginationAndLoad();
             }
         }
 
