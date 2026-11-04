@@ -189,7 +189,7 @@
                 display: "standalone",
                 background_color: "#f8fafc",
                 theme_color: "#2c6496",
-                icons: [{ src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzJjNjQ5NiIvPjx0ZXh0IHg9IjUwIiB5PSI2MCIgZm9udC1zaXplPSI0MCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+ZTwvdGV4dD48L3N2Zz4=", sizes: "512x512", type: "image/svg+xml" }]
+                icons: [{ src: "logo.png", sizes: "512x512", type: "image/png" }]
             };
             const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
             document.getElementById('dynamic-manifest').href = URL.createObjectURL(blob);
