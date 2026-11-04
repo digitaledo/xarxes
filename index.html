@@ -46,16 +46,30 @@
                 </div>
             </div>
             
-            <div class="flex bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
+            <div id="navButtons" class="hidden flex bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
                 <button id="btnRoleTeacher" onclick="showView('teacher')" class="flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">👨‍🏫 Mestre/a</button>
-                <button id="btnRoleManager" onclick="showView('login')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor/a</button>
+                <button id="btnRoleManager" onclick="showView('manager')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor/a</button>
             </div>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 py-6 w-full flex-grow relative">
         
-        <section id="view-teacher" class="space-y-4">
+        <section id="view-login" class="flex justify-center items-center py-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-sm w-full text-center">
+                <div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés eDoActiu</h2>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <input type="password" id="appPassword" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+                    <button type="submit" class="w-full py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow transition">Entrar</button>
+                    <p id="loginError" class="text-rose-500 text-sm hidden font-medium">Contrasenya incorrecta</p>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-teacher" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="font-school text-xl font-bold text-edo-darkblue mb-1">Nova publicació</h2>
                 <p class="text-sm text-slate-500 mb-5">Envia fotos o vídeos curts (màx 30s).</p>
@@ -90,20 +104,6 @@
                     <button type="submit" id="btnSubmitPost" class="w-full py-3.5 bg-edo-orange hover:bg-[#c48212] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-paper-plane"></i> Enviar als gestors/es
                     </button>
-                </form>
-            </div>
-        </section>
-
-        <section id="view-login" class="hidden flex justify-center items-center py-10">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-sm w-full text-center">
-                <div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    <i class="fa-solid fa-lock"></i>
-                </div>
-                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés Gestors/es</h2>
-                <form onsubmit="handleLogin(event)" class="space-y-4">
-                    <input type="password" id="managerPassword" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
-                    <button type="submit" class="w-full py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow transition">Entrar al Tauler</button>
-                    <p id="loginError" class="text-rose-500 text-sm hidden font-medium">Contrasenya incorrecta</p>
                 </form>
             </div>
         </section>
@@ -161,17 +161,25 @@
     <script>
         const SUPABASE_URL = 'https://igvpxbefxrebxndjwolc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_mbbHsnAep3if_N5DnfNFJA_kDz-0lQJ';
-        const TARGET_HASH = 'ef5336fef9b66236b2803b9b4f4c2e6fbb2a62886f4cb48aeb78f2cb2fcb1b36';
-        
+        let hashT = "";
+        let hashM = "";
         let supabaseClient;
-        let isManagerAuthenticated = false;
+        let userRole = "";
         let selectedFilesToUpload = [];
-        
         let currentPage = 1;
         const itemsPerPage = 5;
         let hasMorePosts = false;
-
         const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
+
+        async function initAuth() {
+            const msgT = new TextEncoder().encode(atob('ZXVnZW5p'));
+            const bufT = await crypto.subtle.digest('SHA-256', msgT);
+            hashT = Array.from(new Uint8Array(bufT)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+            const msgM = new TextEncoder().encode(atob('eGFyeGVzMTIz'));
+            const bufM = await crypto.subtle.digest('SHA-256', msgM);
+            hashM = Array.from(new Uint8Array(bufM)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         function initPWA() {
             const manifestData = {
@@ -189,6 +197,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initPWA();
+            initAuth();
             try {
                 const select = document.getElementById('postGroup');
                 groupsList.forEach(g => {
@@ -197,36 +206,11 @@
                     opt.textContent = g;
                     select.appendChild(opt);
                 });
-                showView('teacher'); 
                 if (window.supabase) {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 }
             } catch (err) {}
         });
-
-        function showView(viewName) {
-            document.getElementById('view-teacher').classList.add('hidden');
-            document.getElementById('view-login').classList.add('hidden');
-            document.getElementById('view-manager').classList.add('hidden');
-            const btnT = document.getElementById('btnRoleTeacher');
-            const btnM = document.getElementById('btnRoleManager');
-
-            if (viewName === 'teacher') {
-                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
-                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
-                document.getElementById('view-teacher').classList.remove('hidden');
-            } else if (viewName === 'login') {
-                if (isManagerAuthenticated) { showView('manager'); return; }
-                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
-                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
-                document.getElementById('view-login').classList.remove('hidden');
-            } else if (viewName === 'manager') {
-                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
-                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
-                document.getElementById('view-manager').classList.remove('hidden');
-                resetPaginationAndLoad();
-            }
-        }
 
         async function hashString(str) {
             const msgUint8 = new TextEncoder().encode(str);
@@ -237,15 +221,47 @@
 
         async function handleLogin(e) {
             e.preventDefault();
-            const pass = document.getElementById('managerPassword').value;
+            const pass = document.getElementById('appPassword').value;
             const hashed = await hashString(pass);
-            if (hashed === TARGET_HASH) {
-                isManagerAuthenticated = true;
-                document.getElementById('managerPassword').value = '';
+            
+            if (hashed === hashT) {
+                userRole = 'teacher';
+                document.getElementById('appPassword').value = '';
                 document.getElementById('loginError').classList.add('hidden');
+                document.getElementById('navButtons').classList.remove('hidden');
+                document.getElementById('btnRoleManager').classList.add('hidden');
+                showView('teacher');
+            } else if (hashed === hashM) {
+                userRole = 'manager';
+                document.getElementById('appPassword').value = '';
+                document.getElementById('loginError').classList.add('hidden');
+                document.getElementById('navButtons').classList.remove('hidden');
+                document.getElementById('btnRoleManager').classList.remove('hidden');
                 showView('manager');
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function showView(viewName) {
+            if (!userRole) return;
+            if (viewName === 'manager' && userRole !== 'manager') return;
+
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('view-teacher').classList.add('hidden');
+            document.getElementById('view-manager').classList.add('hidden');
+            const btnT = document.getElementById('btnRoleTeacher');
+            const btnM = document.getElementById('btnRoleManager');
+
+            if (viewName === 'teacher') {
+                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
+                document.getElementById('view-teacher').classList.remove('hidden');
+            } else if (viewName === 'manager') {
+                btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
+                document.getElementById('view-manager').classList.remove('hidden');
+                resetPaginationAndLoad();
             }
         }
 
