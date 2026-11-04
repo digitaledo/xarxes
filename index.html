@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eDoActiu - Gestor de xarxes escolars</title>
+    <title>eDoActiu - Gestor/a de xarxes escolars</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -55,6 +55,7 @@
         <section id="view-teacher" class="space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="font-school text-xl font-bold text-edo-darkblue mb-1">Nova publicació</h2>
+                <p class="text-sm text-slate-500 mb-5">Envia fotos i detalls sense haver de registrar-te.</p>
                 
                 <form id="postForm" onsubmit="submitPost(event)" class="space-y-4">
                     <div>
@@ -97,7 +98,7 @@
                 <div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés gestors/es</h2>
+                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés Gestors/es</h2>
                 <p class="text-sm text-slate-500 mb-6">Introdueix la contrasenya d'administració.</p>
                 
                 <form onsubmit="handleLogin(event)" class="space-y-4">
@@ -132,7 +133,7 @@
         const SUPABASE_URL = 'https://igvpxbefxrebxndjwolc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_mbbHsnAep3if_N5DnfNFJA_kDz-0lQJ';
         
-        let supabaseClient; // Canviat per evitar conflictes de nom
+        let supabaseClient; 
 
         const groupsList = [
             "Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B",
@@ -155,7 +156,6 @@
                 });
                 showView('teacher'); 
 
-                // Iniciar Supabase
                 if (window.supabase) {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 }
@@ -195,7 +195,7 @@
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('managerPassword').value;
-            // Contrasenya gestors/es
+            // Contrasenya gestors
             if (pass === 'xarxes123') {
                 isManagerAuthenticated = true;
                 document.getElementById('managerPassword').value = '';
@@ -271,7 +271,7 @@
 
                 if (dbError) throw dbError;
 
-                alert("✅ Publicació enviada correctament als gestors/es");
+                alert("✅ Publicació enviada correctament als gestors/es!");
                 document.getElementById('postForm').reset();
                 document.getElementById('imagePreviewContainer').innerHTML = '';
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
@@ -279,7 +279,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Error en pujar la foto. Has executat el codi SQL de les Polítiques a Supabase?");
+                alert("Error en pujar la foto. Revisa la connexió.");
             } finally {
                 btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar als gestors/es`;
                 btnSubmit.disabled = false;
@@ -342,8 +342,8 @@
                                 <i class="fa-regular fa-copy"></i> Copiar Text
                             </button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button onclick="downloadImages('${p.imatges.join(',')}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-edo-darkblue text-sm font-semibold rounded-lg transition">
-                                <i class="fa-solid fa-download"></i> Descarregar Fotos
+                            <button id="btnDownload_${p.id}" onclick="downloadImages('${p.imatges.join(',')}', 'btnDownload_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-edo-darkblue text-sm font-semibold rounded-lg transition">
+                                <i class="fa-solid fa-download"></i> Descarregar/Compartir Fotos
                             </button>
                             ` : ''}
                         </div>
@@ -367,7 +367,7 @@
                 
             } catch (error) {
                 console.error(error);
-                loader.innerHTML = `<p class="text-rose-500 font-medium text-center">No hi ha accés per llegir les dades de Supabase. Revisa els permisos RLS.</p>`;
+                loader.innerHTML = `<p class="text-rose-500 font-medium text-center">No hi ha accés per llegir les dades de Supabase.</p>`;
             }
         }
 
@@ -378,18 +378,58 @@
             });
         }
 
-        function downloadImages(imagesString) {
+        // FUNCIÓ ACTUALITZADA PER SUPORTAR MÒBILS PERFECTAMENT
+        async function downloadImages(imagesString, buttonId) {
+            const btn = document.getElementById(buttonId);
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
+            btn.disabled = true;
+
             const images = imagesString.split(',');
-            images.forEach((url, index) => {
-                fetch(url).then(response => response.blob()).then(blob => {
+            
+            try {
+                // 1. Provem d'utilitzar la Web Share API nativa (Ideal per iOS i Android)
+                if (navigator.share && navigator.canShare) {
+                    const filesArray = [];
+                    for (let i = 0; i < images.length; i++) {
+                        const response = await fetch(images[i]);
+                        const blob = await response.blob();
+                        const file = new File([blob], `foto_escola_${i+1}.jpg`, { type: blob.type || 'image/jpeg' });
+                        filesArray.push(file);
+                    }
+                    
+                    if (navigator.canShare({ files: filesArray })) {
+                        await navigator.share({
+                            files: filesArray,
+                            title: 'Fotos eDoActiu',
+                        });
+                        return; // Exit if successful
+                    }
+                }
+
+                // 2. Mètode clàssic si falla la Web Share API o estem en un ordinador
+                alert("A continuació es descarregaran les fotos. Si el navegador (com Safari o Chrome) et demana permís per 'Descarregar múltiples fitxers', si us plau accepta'l.");
+                
+                for (let i = 0; i < images.length; i++) {
+                    const response = await fetch(images[i]);
+                    const blob = await response.blob();
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.download = `edoactiu_foto_${index + 1}.jpg`;
+                    link.download = `edoactiu_foto_${i + 1}.jpg`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-                });
-            });
+                    
+                    // Pausa per evitar el bloqueig antispam dels navegadors
+                    await new Promise(resolve => setTimeout(resolve, 600)); 
+                }
+            } catch (error) {
+                console.error("Error en descarregar:", error);
+                alert("Com que el mòbil bloqueja la descàrrega directa, si us plau toca sobre la miniatura de la imatge per obrir-la i mantén-la premuda per guardar-la al carret.");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
         }
 
         async function updateStatus(id, newStatus) {
