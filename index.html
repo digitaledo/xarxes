@@ -30,7 +30,6 @@
 </head>
 <body class="bg-slate-50 text-edo-gray min-h-screen flex flex-col">
 
-    <!-- Capçalera corporativa -->
     <header class="bg-edo-darkblue text-white shadow-md sticky top-0 z-50">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
@@ -52,7 +51,7 @@
 
     <main class="max-w-4xl mx-auto px-4 py-6 w-full flex-grow">
         
-        <!-- VISTA MESTRE: Enviar publicació -->
+        <!-- VISTA MESTRE -->
         <section id="view-teacher" class="space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="font-school text-xl font-bold text-edo-darkblue mb-1">Nova publicació</h2>
@@ -93,14 +92,14 @@
             </div>
         </section>
 
-        <!-- VISTA LOGIN GESTOR: Integrat, sense alertes -->
+        <!-- VISTA LOGIN GESTOR -->
         <section id="view-login" class="hidden flex justify-center items-center py-10">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-sm w-full text-center">
                 <div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                     <i class="fa-solid fa-lock"></i>
                 </div>
                 <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés Gestors</h2>
-                <p class="text-sm text-slate-500 mb-6">Introdueix la contrasenya d'administració per revisar i publicar contingut.</p>
+                <p class="text-sm text-slate-500 mb-6">Introdueix la contrasenya d'administració.</p>
                 
                 <form onsubmit="handleLogin(event)" class="space-y-4">
                     <input type="password" id="managerPassword" required placeholder="Contrasenya..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
@@ -112,7 +111,7 @@
             </div>
         </section>
 
-        <!-- VISTA GESTOR: Tauler Supabase -->
+        <!-- VISTA GESTOR -->
         <section id="view-manager" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <h2 class="font-school text-xl font-bold text-edo-darkblue">Tauler de publicacions</h2>
@@ -124,21 +123,23 @@
                 <p class="mt-2 text-edo-gray font-medium">Carregant dades des de Supabase...</p>
             </div>
 
-            <div id="postsContainer" class="grid grid-cols-1 gap-4">
-                <!-- S'omple amb JS des de Supabase -->
-            </div>
+            <div id="postsContainer" class="grid grid-cols-1 gap-4"></div>
         </section>
 
     </main>
 
     <script>
-        // === 1. CONFIGURACIÓ DE SUPABASE ===
-        // IMPORTANT: Posa aquí les dades que et donarà Supabase en crear el projecte (Settings > API)
+        // CONFIGURACIÓ DE SUPABASE AMB LES TEVES DADES
         const SUPABASE_URL = 'https://igvpxbefxrebxndjwolc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_mbbHsnAep3if_N5DnfNFJA_kDz-0lQJ';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error("No s'ha pogut iniciar Supabase correctament:", error);
+        }
 
-        // Llistat de grups (ara amb espai separant número i lletra)
         const groupsList = [
             "Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B",
             "1r A", "1r B", "2n A", "2n B", "3r A", "3r B",
@@ -156,7 +157,6 @@
             showView('teacher'); 
         });
 
-        // --- NAVEGACIÓ I ROLS ---
         function showView(viewName) {
             document.getElementById('view-teacher').classList.add('hidden');
             document.getElementById('view-login').classList.add('hidden');
@@ -181,14 +181,14 @@
                 btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
                 btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
                 document.getElementById('view-manager').classList.remove('hidden');
-                loadPosts(); // Carregar dades de la base de dades
+                loadPosts();
             }
         }
 
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('managerPassword').value;
-            // Contrasenya de protecció (pots canviar-la)
+            // Contrasenya de protecció del tauler
             if (pass === 'xarxes123') {
                 isManagerAuthenticated = true;
                 document.getElementById('managerPassword').value = '';
@@ -199,13 +199,12 @@
             }
         }
 
-        // --- VISTA MESTRE: PUJADA ---
         function previewImages() {
             const files = document.getElementById('postPhotos').files;
             const container = document.getElementById('imagePreviewContainer');
             container.innerHTML = '';
             container.classList.remove('hidden');
-            selectedFilesToUpload = Array.from(files).slice(0, 5); // Max 5 fotos
+            selectedFilesToUpload = Array.from(files).slice(0, 5);
 
             selectedFilesToUpload.forEach(file => {
                 const reader = new FileReader();
@@ -221,18 +220,21 @@
 
         async function submitPost(e) {
             e.preventDefault();
+            if (!supabase) {
+                alert("Supabase no està connectat correctament.");
+                return;
+            }
+
             const btnSubmit = document.getElementById('btnSubmitPost');
-            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pujant dades i fotos...`;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pujant dades...`;
             btnSubmit.disabled = true;
 
             const title = document.getElementById('postTitle').value;
             const group = document.getElementById('postGroup').value;
             const description = document.getElementById('postDescription').value;
-            
             let imageUrls = [];
 
             try {
-                // 1. Pujar fotos al Storage de Supabase (bucket: 'xarxes_photos')
                 for (let file of selectedFilesToUpload) {
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -243,7 +245,6 @@
 
                     if (error) throw error;
                     
-                    // Obtenir URL pública
                     const { data: publicUrlData } = supabase.storage
                         .from('xarxes_photos')
                         .getPublicUrl(fileName);
@@ -251,22 +252,19 @@
                     imageUrls.push(publicUrlData.publicUrl);
                 }
 
-                // 2. Inserir dades a la taula 'posts'
                 const { error: dbError } = await supabase
                     .from('posts')
-                    .insert([
-                        { 
-                            titol: title, 
-                            grup: group, 
-                            descripcio: description, 
-                            imatges: imageUrls,
-                            estat: 'Pendent'
-                        }
-                    ]);
+                    .insert([{ 
+                        titol: title, 
+                        grup: group, 
+                        descripcio: description, 
+                        imatges: imageUrls,
+                        estat: 'Pendent'
+                    }]);
 
                 if (dbError) throw dbError;
 
-                alert("✅ Publicació enviada correctament als gestors!");
+                alert("✅ Publicació enviada correctament!");
                 document.getElementById('postForm').reset();
                 document.getElementById('imagePreviewContainer').innerHTML = '';
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
@@ -274,15 +272,15 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Atenció: Assegura't d'haver configurat correctament l'URL i la Key de Supabase al codi, i creat la taula 'posts' i el bucket 'xarxes_photos'.");
+                alert("Error en pujar. Assegura't de tenir la taula 'posts' i el bucket 'xarxes_photos' creats a Supabase.");
             } finally {
                 btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar als gestors`;
                 btnSubmit.disabled = false;
             }
         }
 
-        // --- VISTA GESTOR: TAULER ---
         async function loadPosts() {
+            if (!supabase) return;
             const container = document.getElementById('postsContainer');
             const loader = document.getElementById('loadingIndicator');
             
@@ -290,7 +288,6 @@
             loader.classList.remove('hidden');
 
             try {
-                // Llegir des de Supabase ordenat per data (els nous primer)
                 const { data: posts, error } = await supabase
                     .from('posts')
                     .select('*')
@@ -299,7 +296,7 @@
                 if (error) throw error;
                 loader.classList.add('hidden');
 
-                if (posts.length === 0) {
+                if (!posts || posts.length === 0) {
                     container.innerHTML = `
                         <div class="bg-white p-8 rounded-2xl text-center border border-dashed border-slate-200">
                             <i class="fa-solid fa-check-double text-4xl text-slate-300 mb-2"></i>
@@ -311,7 +308,7 @@
                 container.innerHTML = posts.map(p => {
                     const dateFormatted = new Date(p.created_at).toLocaleDateString('ca-ES');
                     return `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : 'border-edo-lightblue'} relative">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : 'border-edo-lightblue'}">
                         <div class="flex justify-between items-start gap-2 mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="bg-slate-100 text-edo-gray font-school text-sm px-3 py-1 rounded-lg font-bold">${p.grup}</span>
@@ -325,19 +322,17 @@
                         <h3 class="font-bold text-lg text-edo-darkblue mb-2">${p.titol}</h3>
                         <p class="text-sm text-edo-gray mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">${p.descripcio}</p>
                         
-                        <!-- Miniatures d'Imatges -->
                         ${p.imatges && p.imatges.length > 0 ? `
                             <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
-                                ${p.imatges.map((imgUrl, index) => `
-                                    <img src="${imgUrl}" class="h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0 cursor-pointer" onclick="window.open('${imgUrl}', '_blank')" title="Obrir imatge">
+                                ${p.imatges.map(imgUrl => `
+                                    <img src="${imgUrl}" class="h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0 cursor-pointer" onclick="window.open('${imgUrl}', '_blank')">
                                 `).join('')}
                             </div>
                         ` : ''}
                         
-                        <!-- Botonera d'Eines per a Xarxes -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                             <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/'/g, "\\'")}', '${p.grup}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-edo-darkblue text-sm font-semibold rounded-lg transition">
-                                <i class="fa-regular fa-copy"></i> Copiar Text (Instagram/X)
+                                <i class="fa-regular fa-copy"></i> Copiar Text
                             </button>
                             ${p.imatges && p.imatges.length > 0 ? `
                             <button onclick="downloadImages('${p.imatges.join(',')}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-edo-darkblue text-sm font-semibold rounded-lg transition">
@@ -346,18 +341,17 @@
                             ` : ''}
                         </div>
 
-                        <!-- Canvi d'Estat i Esborrar -->
                         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                             ${p.estat === 'Pendent' ? `
                                 <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg hover:bg-[#1a4369] transition">
-                                    <i class="fa-solid fa-check"></i> Marcar com publicat
+                                    <i class="fa-solid fa-check"></i> Marcar publicat
                                 </button>
                             ` : `
                                 <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg hover:bg-slate-300 transition">
                                     Tornar a pendent
                                 </button>
                             `}
-                            <button onclick="deletePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg transition" title="Eliminar">
+                            <button onclick="deletePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg transition">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -366,54 +360,44 @@
                 
             } catch (error) {
                 console.error(error);
-                loader.innerHTML = `<p class="text-rose-500 font-medium">Error connectant a Supabase. Comprova la URL i la Key.</p>`;
+                loader.innerHTML = `<p class="text-rose-500 font-medium">Error carregant dades. Revisa la consola per veure'n el motiu.</p>`;
             }
         }
 
-        // --- EINES PRODUCTIVITAT COMMUNITY MANAGER ---
         function copyToClipboard(title, description, group) {
             const socialText = `✨ ${title}\n\n${description}\n\n📍 Grup: ${group}\n\n#eDoActiu #EscolaEugeniDOrs #Valls #Educació`;
             navigator.clipboard.writeText(socialText).then(() => {
-                alert("Text copiat al portapapers! Ja el pots enganxar a Instagram, Facebook o X.");
+                alert("Text copiat al portapapers!");
             });
         }
 
         function downloadImages(imagesString) {
             const images = imagesString.split(',');
             images.forEach((url, index) => {
-                // Per forçar la descàrrega des de Supabase, obrim l'enllaç i afegim el paràmetre de descàrrega 
-                // (Alternativament descarrega obrint en pestanyes noves per evitar bloquejos del navegador)
-                fetch(url)
-                    .then(response => response.blob())
-                    .then(blob => {
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = `edoactiu_foto_${index + 1}.jpg`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    });
+                fetch(url).then(response => response.blob()).then(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `edoactiu_foto_${index + 1}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
             });
         }
 
-        // --- OPERACIONS BASE DE DADES ---
         async function updateStatus(id, newStatus) {
             try {
                 await supabase.from('posts').update({ estat: newStatus }).eq('id', id);
-                loadPosts(); // Refresca
-            } catch (error) {
-                console.error("Error actualitzant estat", error);
-            }
+                loadPosts();
+            } catch (error) { console.error("Error", error); }
         }
 
         async function deletePost(id) {
-            if(confirm("Segur que vols eliminar definitivament aquesta publicació? (Les imatges associades també deixaran de ser vàlides)")) {
+            if(confirm("Segur que vols eliminar aquesta publicació?")) {
                 try {
                     await supabase.from('posts').delete().eq('id', id);
                     loadPosts();
-                } catch (error) {
-                    console.error("Error eliminant", error);
-                }
+                } catch (error) { console.error("Error", error); }
             }
         }
     </script>
