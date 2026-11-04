@@ -44,7 +44,7 @@
             
             <div class="flex bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
                 <button id="btnRoleTeacher" onclick="showView('teacher')" class="flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">👨‍🏫 Mestre/a</button>
-                <button id="btnRoleManager" onclick="showView('login')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor</button>
+                <button id="btnRoleManager" onclick="showView('login')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor/a</button>
             </div>
         </div>
     </header>
@@ -86,7 +86,7 @@
                     </div>
 
                     <button type="submit" id="btnSubmitPost" class="w-full py-3.5 bg-edo-orange hover:bg-[#c48212] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-paper-plane"></i> Enviar als gestors
+                        <i class="fa-solid fa-paper-plane"></i> Enviar als gestors/es
                     </button>
                 </form>
             </div>
@@ -98,7 +98,7 @@
                 <div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
                     <i class="fa-solid fa-lock"></i>
                 </div>
-                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés Gestors</h2>
+                <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés gestors/es</h2>
                 <p class="text-sm text-slate-500 mb-6">Introdueix la contrasenya d'administració.</p>
                 
                 <form onsubmit="handleLogin(event)" class="space-y-4">
@@ -196,7 +196,7 @@
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('managerPassword').value;
-            // Contrasenya gestors
+            // Contrasenya gestors/es
             if (pass === 'xarxes123') {
                 isManagerAuthenticated = true;
                 document.getElementById('managerPassword').value = '';
@@ -272,7 +272,7 @@
 
                 if (dbError) throw dbError;
 
-                alert("✅ Publicació enviada correctament als gestors!");
+                alert("✅ Publicació enviada correctament als gestors/es");
                 document.getElementById('postForm').reset();
                 document.getElementById('imagePreviewContainer').innerHTML = '';
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
@@ -282,7 +282,7 @@
                 console.error(error);
                 alert("Error en pujar la foto. Has executat el codi SQL de les Polítiques a Supabase?");
             } finally {
-                btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar als gestors`;
+                btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar als gestors/es`;
                 btnSubmit.disabled = false;
             }
         }
