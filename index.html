@@ -115,7 +115,7 @@
         <section id="view-manager" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <h2 class="font-school text-xl font-bold text-edo-darkblue">Tauler de publicacions</h2>
-                <button onclick="loadPosts()" class="text-edo-darkblue bg-edo-lightblue/20 px-3 py-2 rounded-lg text-sm font-semibold"><i class="fa-solid fa-rotate-right"></i> Actualitzar</button>
+                <button onclick="loadPosts()" class="text-edo-darkblue bg-edo-lightblue/20 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-edo-lightblue/30 transition"><i class="fa-solid fa-rotate-right"></i> Actualitzar</button>
             </div>
 
             <div id="loadingIndicator" class="text-center py-10 hidden">
@@ -129,16 +129,11 @@
     </main>
 
     <script>
-        // CONFIGURACIÓ DE SUPABASE AMB LES TEVES DADES
+        // CONFIGURACIÓ SEGURA DE SUPABASE
         const SUPABASE_URL = 'https://igvpxbefxrebxndjwolc.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_mbbHsnAep3if_N5DnfNFJA_kDz-0lQJ';
         
-        let supabase;
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (error) {
-            console.error("No s'ha pogut iniciar Supabase correctament:", error);
-        }
+        let supabaseClient; // Canviat per evitar conflictes de nom
 
         const groupsList = [
             "Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B",
@@ -149,12 +144,25 @@
         let isManagerAuthenticated = false;
         let selectedFilesToUpload = [];
 
+        // Iniciar la interfície de manera segura
         document.addEventListener('DOMContentLoaded', () => {
-            const select = document.getElementById('postGroup');
-            groupsList.forEach(g => {
-                select.innerHTML += `<option value="${g}">${g}</option>`;
-            });
-            showView('teacher'); 
+            try {
+                const select = document.getElementById('postGroup');
+                groupsList.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g;
+                    opt.textContent = g;
+                    select.appendChild(opt);
+                });
+                showView('teacher'); 
+
+                // Iniciar Supabase
+                if (window.supabase) {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                }
+            } catch (err) {
+                console.error("Error carregant la web:", err);
+            }
         });
 
         function showView(viewName) {
@@ -188,7 +196,7 @@
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('managerPassword').value;
-            // Contrasenya de protecció del tauler
+            // Contrasenya gestors
             if (pass === 'xarxes123') {
                 isManagerAuthenticated = true;
                 document.getElementById('managerPassword').value = '';
@@ -220,13 +228,13 @@
 
         async function submitPost(e) {
             e.preventDefault();
-            if (!supabase) {
-                alert("Supabase no està connectat correctament.");
+            if (!supabaseClient) {
+                alert("S'està establint la connexió... Torna-ho a provar en un segon.");
                 return;
             }
 
             const btnSubmit = document.getElementById('btnSubmitPost');
-            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pujant dades...`;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pujant...`;
             btnSubmit.disabled = true;
 
             const title = document.getElementById('postTitle').value;
@@ -239,20 +247,20 @@
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                     
-                    const { data, error } = await supabase.storage
+                    const { data, error } = await supabaseClient.storage
                         .from('xarxes_photos')
                         .upload(fileName, file);
 
                     if (error) throw error;
                     
-                    const { data: publicUrlData } = supabase.storage
+                    const { data: publicUrlData } = supabaseClient.storage
                         .from('xarxes_photos')
                         .getPublicUrl(fileName);
                         
                     imageUrls.push(publicUrlData.publicUrl);
                 }
 
-                const { error: dbError } = await supabase
+                const { error: dbError } = await supabaseClient
                     .from('posts')
                     .insert([{ 
                         titol: title, 
@@ -264,7 +272,7 @@
 
                 if (dbError) throw dbError;
 
-                alert("✅ Publicació enviada correctament!");
+                alert("✅ Publicació enviada correctament als gestors!");
                 document.getElementById('postForm').reset();
                 document.getElementById('imagePreviewContainer').innerHTML = '';
                 document.getElementById('imagePreviewContainer').classList.add('hidden');
@@ -272,7 +280,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Error en pujar. Assegura't de tenir la taula 'posts' i el bucket 'xarxes_photos' creats a Supabase.");
+                alert("Error en pujar la foto. Has executat el codi SQL de les Polítiques a Supabase?");
             } finally {
                 btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar als gestors`;
                 btnSubmit.disabled = false;
@@ -280,7 +288,7 @@
         }
 
         async function loadPosts() {
-            if (!supabase) return;
+            if (!supabaseClient) return;
             const container = document.getElementById('postsContainer');
             const loader = document.getElementById('loadingIndicator');
             
@@ -288,7 +296,7 @@
             loader.classList.remove('hidden');
 
             try {
-                const { data: posts, error } = await supabase
+                const { data: posts, error } = await supabaseClient
                     .from('posts')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -360,14 +368,14 @@
                 
             } catch (error) {
                 console.error(error);
-                loader.innerHTML = `<p class="text-rose-500 font-medium">Error carregant dades. Revisa la consola per veure'n el motiu.</p>`;
+                loader.innerHTML = `<p class="text-rose-500 font-medium text-center">No hi ha accés per llegir les dades de Supabase. Revisa els permisos RLS.</p>`;
             }
         }
 
         function copyToClipboard(title, description, group) {
             const socialText = `✨ ${title}\n\n${description}\n\n📍 Grup: ${group}\n\n#eDoActiu #EscolaEugeniDOrs #Valls #Educació`;
             navigator.clipboard.writeText(socialText).then(() => {
-                alert("Text copiat al portapapers!");
+                alert("Text copiat per penjar a les xarxes!");
             });
         }
 
@@ -387,17 +395,17 @@
 
         async function updateStatus(id, newStatus) {
             try {
-                await supabase.from('posts').update({ estat: newStatus }).eq('id', id);
+                await supabaseClient.from('posts').update({ estat: newStatus }).eq('id', id);
                 loadPosts();
-            } catch (error) { console.error("Error", error); }
+            } catch (error) { console.error(error); }
         }
 
         async function deletePost(id) {
-            if(confirm("Segur que vols eliminar aquesta publicació?")) {
+            if(confirm("Segur que vols eliminar aquesta publicació de la base de dades?")) {
                 try {
-                    await supabase.from('posts').delete().eq('id', id);
+                    await supabaseClient.from('posts').delete().eq('id', id);
                     loadPosts();
-                } catch (error) { console.error("Error", error); }
+                } catch (error) { console.error(error); }
             }
         }
     </script>
