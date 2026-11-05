@@ -179,7 +179,7 @@
     <div id="toastContainer" class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
     <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex suflex-col max-h-[90vh]">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
                 <h3 class="font-bold">Editar Publicació</h3>
                 <button onclick="closeEditModal()" class="text-white text-xl">&times;</button>
@@ -676,9 +676,9 @@
                         
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
                             <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-pen"></i> Editar</button>
-                            <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-regular fa-copy"></i> Copiar</button>
+                            <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-regular fa-copy"></i> Copiar text</button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button id="btnDl_${p.id}" onclick="downloadMedia('${imgsStr}', 'btnDl_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar</button>
+                            <button id="btnDl_${p.id}" onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}'); downloadMedia('${imgsStr}', 'btnDl_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar i copiar</button>
                             ` : ''}
                         </div>
 
