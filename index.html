@@ -221,23 +221,18 @@
         </div>
     </div>
 
-    <!-- Modal visual per descarregar fotos segur en mòbil/web -->
-    <div id="manualDownloadModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
+    <!-- Modal per descarregar fotos -->
+    <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
-                <h3 class="font-bold"><i class="fa-solid fa-images"></i> Descarregar Arxius</h3>
-                <button onclick="closeManualDownloadModal()" class="text-white text-xl">&times;</button>
+                <h3 class="font-bold"><i class="fa-solid fa-images"></i> Galeria de fotos</h3>
+                <button onclick="closePhotoModal()" class="text-white text-xl">&times;</button>
             </div>
-            <div class="p-3 bg-emerald-50 text-emerald-700 text-sm font-semibold border-b border-emerald-100 flex items-center gap-2">
-                <i class="fa-solid fa-check-circle text-lg"></i> Text copiat correctament al porta-retalls!
+            <div id="photoModalContent" class="p-4 overflow-y-auto flex-grow bg-slate-50">
+                <!-- S'omple per JS -->
             </div>
-            <div class="px-4 py-3 text-sm text-edo-gray bg-slate-50 border-b border-slate-200">
-                👇 Toca cada botó per descarregar l'arxiu corresponent (o mantingues premuda la foto per desar-la al carret).
-            </div>
-            <div id="manualDownloadContainer" class="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-100">
-            </div>
-            <div class="p-4 border-t border-slate-200 flex justify-center bg-white">
-                <button onclick="closeManualDownloadModal()" class="px-6 py-3 bg-edo-darkblue text-white font-bold rounded-xl w-full shadow-sm">Ja ho tinc, tancar</button>
+            <div class="p-4 border-t border-slate-200 bg-white">
+                <button onclick="closePhotoModal()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl w-full shadow-sm transition">Tancar galeria</button>
             </div>
         </div>
     </div>
@@ -727,10 +722,10 @@
                         ` : ''}
                         
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                            <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-pen"></i> Editar</button>
-                            <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-regular fa-copy"></i> Copiar text</button>
+                            <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-pen"></i> Editar</button>
+                            <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-regular fa-copy"></i> Copiar text</button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button id="btnDl_${p.id}" onclick="handleSaveAndCopy(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${imgsStr}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar i copiar</button>
+                            <button onclick="openPhotoModal('${imgsStr}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-edo-lightblue/20 text-edo-darkblue text-sm font-bold rounded-lg hover:bg-edo-lightblue/30 transition"><i class="fa-solid fa-images"></i> Fotos</button>
                             ` : ''}
                         </div>
 
@@ -740,11 +735,11 @@
                                 <button onclick="deletePost(${p.id}, '${imgsStr}')" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
                             ` : `
                                 ${p.estat === 'Pendent' ? `
-                                    <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg"><i class="fa-solid fa-check"></i> Marcar publicat</button>
+                                    <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg hover:bg-[#1a4369] transition"><i class="fa-solid fa-check"></i> Marcar publicat</button>
                                 ` : `
-                                    <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg">Tornar pendent</button>
+                                    <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg hover:bg-slate-300 transition">Tornar pendent</button>
                                 `}
-                                <button onclick="archivePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg" title="Arxivar"><i class="fa-solid fa-box-archive"></i></button>
+                                <button onclick="archivePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg transition" title="Arxivar"><i class="fa-solid fa-box-archive"></i></button>
                             `}
                         </div>
                     </div>`;
@@ -777,72 +772,91 @@
 
         function copyToClipboard(title, desc, group, tags) {
             const text = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
-            navigator.clipboard.writeText(text).then(() => showToast("Text copiat!"));
+            navigator.clipboard.writeText(text).then(() => showToast("Text copiat al porta-retalls!"));
         }
 
-        async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
-            const btn = document.getElementById('btnDl_' + id);
-            const originalHtml = btn.innerHTML;
+        function openPhotoModal(urlsStr) {
+            const urls = urlsStr.split(',');
+            const container = document.getElementById('photoModalContent');
+            let html = '';
+
+            if (urls.length > 1) {
+                html += `
+                <div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
+                    <h4 class="font-bold text-edo-darkblue mb-3 text-sm">Opció ràpida (Directe a la galeria)</h4>
+                    <button id="btnDownloadAll" onclick="downloadAllMedia('${urlsStr}')" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
+                        <i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})
+                    </button>
+                    <p class="text-xs text-edo-gray mt-3 leading-relaxed">S'obrirà el menú de compartir del teu mòbil. Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> i s'enviaran directes al teu carret.</p>
+                </div>
+                <hr class="border-slate-200 mb-6">
+                `;
+            }
+
+            html += `<h4 class="font-bold text-edo-darkblue mb-4 text-sm">Descarregar d'una en una:</h4>`;
+            html += `<div class="space-y-5">`;
+            
+            urls.forEach((url, index) => {
+                const cleanUrl = url.split('?')[0].toLowerCase();
+                const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
+                const mediaTag = isVideo 
+                    ? `<video src="${url}" controls class="w-full h-48 object-cover rounded-t-lg bg-black"></video>`
+                    : `<img src="${url}" class="w-full h-48 object-cover rounded-t-lg bg-slate-100">`;
+                    
+                html += `
+                <div class="border border-slate-200 rounded-xl shadow-sm flex flex-col bg-white">
+                    ${mediaTag}
+                    <button onclick="downloadSingleMedia('${url}')" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-download"></i> Baixar arxiu ${index + 1}
+                    </button>
+                </div>
+                `;
+            });
+            
+            html += `</div>`;
+            container.innerHTML = html;
+            document.getElementById('photoModal').classList.remove('hidden');
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').classList.add('hidden');
+        }
+
+        async function downloadAllMedia(urlsStr) {
+            const btn = document.getElementById('btnDownloadAll');
+            const ogHtml = btn.innerHTML;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
             btn.disabled = true;
 
-            const textToCopy = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
-            
-            try {
-                await navigator.clipboard.writeText(textToCopy);
-                showToast("Text copiat al porta-retalls!");
-            } catch (e) {
-                showToast("No s'ha pogut copiar el text", "error");
-            }
-
-            if(!urlsStr) {
-                btn.innerHTML = `<i class="fa-solid fa-check"></i> Copiat!`;
-                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
-                return;
-            }
-
             const urls = urlsStr.split(',');
+            try {
+                const fetchPromises = urls.map(async (url, index) => {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const extension = blob.type.split('/')[1] || 'jpeg';
+                    return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
+                });
+                const filesArray = await Promise.all(fetchPromises);
 
-            if (urls.length === 1) {
-                downloadSingleFile(urls[0]);
-                btn.innerHTML = `<i class="fa-solid fa-check"></i> Guardat!`;
-                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
-            } else {
-                openManualDownloadModal(urls);
-                btn.innerHTML = originalHtml;
+                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                    await navigator.share({ files: filesArray });
+                    btn.innerHTML = `<i class="fa-solid fa-check"></i> Fet!`;
+                } else {
+                    showToast("El teu navegador no suporta guardar-les totes juntes. Utilitza els botons d'una en una.", "error");
+                    btn.innerHTML = ogHtml;
+                }
+            } catch (error) {
+                btn.innerHTML = ogHtml;
+                if (error.name !== 'AbortError') {
+                    showToast("Acció cancel·lada", "error");
+                }
+            } finally {
                 btn.disabled = false;
+                setTimeout(() => { if(btn.innerHTML.includes('Fet!')) btn.innerHTML = ogHtml; }, 2000);
             }
         }
 
-        function openManualDownloadModal(urls) {
-            const container = document.getElementById('manualDownloadContainer');
-            container.innerHTML = '';
-            urls.forEach((url, index) => {
-                let mediaEl = '';
-                const cleanUrl = url.split('?')[0].toLowerCase();
-                if(cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) {
-                    mediaEl = `<video src="${url}" controls class="w-full rounded-t-lg border-b border-slate-100 bg-black"></video>`;
-                } else {
-                    mediaEl = `<img src="${url}" class="w-full rounded-t-lg border-b border-slate-100 object-contain max-h-64 bg-slate-50">`;
-                }
-                
-                container.innerHTML += `
-                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 mb-4 flex flex-col">
-                        ${mediaEl}
-                        <button onclick="downloadSingleFile('${url}')" class="px-4 py-3 text-edo-darkblue font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition rounded-b-lg">
-                            <i class="fa-solid fa-download"></i> Descarregar arxiu
-                        </button>
-                    </div>
-                `;
-            });
-            document.getElementById('manualDownloadModal').classList.remove('hidden');
-        }
-
-        function closeManualDownloadModal() {
-            document.getElementById('manualDownloadModal').classList.add('hidden');
-        }
-
-        function downloadSingleFile(url) {
+        function downloadSingleMedia(url) {
             const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
             const a = document.createElement('a');
             a.href = downloadUrl;
