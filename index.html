@@ -729,60 +729,63 @@
         }
 
         async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
-            const text = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast("Text copiat al porta-retalls!");
-            } catch (e) {
-                showToast("Error en copiar el text", "error");
-            }
-            if(urlsStr) {
-                await downloadMedia(urlsStr, 'btnDl_' + id);
-            }
-        }
-
-        async function downloadMedia(urlsStr, btnId) {
-            const btn = document.getElementById(btnId);
-            const og = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            const btn = document.getElementById('btnDl_' + id);
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processant...`;
             btn.disabled = true;
+
+            const textToCopy = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
+            
+            let textCopied = false;
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                textCopied = true;
+            } catch (e) {}
+
+            if(!urlsStr) {
+                showToast(textCopied ? "Text copiat!" : "Text no copiat");
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                return;
+            }
+
             const urls = urlsStr.split(',');
             try {
-                if (navigator.share && navigator.canShare) {
-                    const filesArray = [];
-                    for (let i = 0; i < urls.length; i++) {
-                        const res = await fetch(urls[i]);
-                        const blob = await res.blob();
-                        const ext = blob.type.split('/')[1] || 'jpeg';
-                        filesArray.push(new File([blob], `edoactiu_${i+1}.${ext}`, { type: blob.type }));
+                const fetchPromises = urls.map(async (url, index) => {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const extension = blob.type.split('/')[1] || 'jpeg';
+                    return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
+                });
+                
+                const filesArray = await Promise.all(fetchPromises);
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: filesArray })) {
+                    await navigator.share({
+                        files: filesArray,
+                        title: title,
+                        text: textToCopy 
+                    });
+                    showToast(textCopied ? "Text copiat i contingut compartit!" : "Contingut compartit!");
+                } else {
+                    for (let i = 0; i < filesArray.length; i++) {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(filesArray[i]);
+                        a.download = filesArray[i].name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(a.href);
+                        await new Promise(r => setTimeout(r, 300));
                     }
-                    if (navigator.canShare({ files: filesArray })) {
-                        await navigator.share({ files: filesArray });
-                        btn.innerHTML = og;
-                        btn.disabled = false;
-                        return;
-                    }
-                }
-                for (let i = 0; i < urls.length; i++) {
-                    const res = await fetch(urls[i]);
-                    const blob = await res.blob();
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    const ext = urls[i].split('.').pop().split('?')[0] || 'jpg';
-                    a.download = `eDoActiu_media_${i+1}.${ext}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(a.href);
-                    if (i < urls.length - 1) {
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
+                    showToast(textCopied ? "Text copiat i arxius descarregats!" : "Arxius descarregats!");
                 }
             } catch (error) {
-                console.error(error);
-                showToast("Descàrrega/Compartició cancel·lada", "error");
+                if (error.name !== 'AbortError') {
+                    showToast("Acció cancel·lada o error", "error");
+                }
             } finally {
-                btn.innerHTML = og;
+                btn.innerHTML = originalHtml;
                 btn.disabled = false;
             }
         }
