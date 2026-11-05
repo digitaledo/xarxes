@@ -67,9 +67,8 @@
                     <i class="fa-solid fa-lock"></i>
                 </div>
                 <h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés eDoActiu</h2>
-                <form onsubmit="handleLogin(event)" class="space-y-4">
-                    <input type="email" id="appEmail" required placeholder="Correu electrònic" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
-                    <input type="password" id="appPassword" required placeholder="Contrasenya" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+                <form onsubmit="handleLogin(event)" class="space-y-4 mt-6">
+                    <input type="password" id="appPassword" required placeholder="Introdueix la contrasenya" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
                     <button type="submit" id="btnLogin" class="w-full py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow transition">Entrar</button>
                 </form>
             </div>
@@ -260,13 +259,6 @@
                 document.getElementById('navLogoutOnly').classList.add('hidden');
                 document.getElementById('navLogoutOnly').classList.remove('flex');
                 showView('manager');
-            } else if (email === 'docent@eugenidors.com') {
-                userRole = 'teacher';
-                document.getElementById('navButtons').classList.add('hidden');
-                document.getElementById('navButtons').classList.remove('flex');
-                document.getElementById('navLogoutOnly').classList.remove('hidden');
-                document.getElementById('navLogoutOnly').classList.add('flex');
-                showView('teacher');
             } else {
                 userRole = 'teacher';
                 document.getElementById('navButtons').classList.add('hidden');
@@ -285,22 +277,28 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             
-            const email = document.getElementById('appEmail').value;
             const pass = document.getElementById('appPassword').value;
             
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: pass });
+            let res = await supabaseClient.auth.signInWithPassword({ email: 'docent@eugenidors.com', password: pass });
+            
+            if (!res.error && res.data.user) {
+                setUserRole(res.data.user.email);
+                document.getElementById('appPassword').value = '';
+                showToast("Sessió iniciada com a Mestre/a");
+            } else {
+                let res2 = await supabaseClient.auth.signInWithPassword({ email: 'gestor@eugenidors.com', password: pass });
+                
+                if (!res2.error && res2.data.user) {
+                    setUserRole(res2.data.user.email);
+                    document.getElementById('appPassword').value = '';
+                    showToast("Sessió iniciada com a Gestor/a");
+                } else {
+                    showToast("Contrasenya incorrecta", "error");
+                }
+            }
             
             btn.disabled = false;
             btn.textContent = 'Entrar';
-
-            if (error) {
-                showToast("Correu o contrasenya incorrectes", "error");
-            } else {
-                setUserRole(data.user.email);
-                document.getElementById('appEmail').value = '';
-                document.getElementById('appPassword').value = '';
-                showToast("Sessió iniciada");
-            }
         }
 
         async function handleLogout() {
