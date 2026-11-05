@@ -96,9 +96,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-edo-gray mb-1">Pujar fotos o vídeos (Màxim 5) *</label>
+                        <label class="block text-sm font-semibold text-edo-gray mb-1">Pujar fotos o vídeos (Màxim 5)</label>
                         <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer relative">
-                            <input type="file" id="postPhotos" accept="image/*,video/mp4,video/quicktime,video/webm" multiple required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewMedia()">
+                            <input type="file" id="postPhotos" accept="image/*,video/mp4,video/quicktime,video/webm" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewMedia()">
                             <i class="fa-solid fa-cloud-arrow-up text-3xl text-edo-lightblue mb-2"></i>
                             <p class="text-sm font-medium text-edo-gray">Toca per obrir la càmera o galeria</p>
                         </div>
@@ -396,37 +396,85 @@
         }
 
         async function previewMedia() {
-            const files = Array.from(document.getElementById('postPhotos').files).slice(0, 5);
-            const container = document.getElementById('mediaPreviewContainer');
-            container.innerHTML = '';
-            selectedFilesToUpload = [];
+            const filesInput = document.getElementById('postPhotos');
+            const files = Array.from(filesInput.files);
+            const availableSlots = 5 - selectedFilesToUpload.length;
+            const filesToAdd = files.slice(0, availableSlots);
 
-            for (let file of files) {
+            for (let file of filesToAdd) {
                 if (file.type.startsWith('image/')) {
                     const compressed = await compressImage(file);
-                    selectedFilesToUpload.push(compressed);
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0';
-                        container.appendChild(img);
-                    };
-                    reader.readAsDataURL(compressed);
+                    selectedFilesToUpload.push({ file: compressed, url: URL.createObjectURL(compressed), type: 'image' });
                 } else if (file.type.startsWith('video/')) {
                     try {
                         const validVideo = await checkVideoDuration(file);
-                        selectedFilesToUpload.push(validVideo);
-                        const video = document.createElement('video');
-                        video.src = URL.createObjectURL(validVideo);
-                        video.className = 'h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0';
-                        container.appendChild(video);
+                        selectedFilesToUpload.push({ file: validVideo, url: URL.createObjectURL(validVideo), type: 'video' });
                     } catch (e) {
-                        showToast(`El vídeo ${file.name} supera els 30 segons`, "error");
+                        showToast(`El vídeo supera els 30 segons`, "error");
                     }
                 }
             }
-            if(selectedFilesToUpload.length > 0) container.classList.remove('hidden');
+            filesInput.value = '';
+            renderPreview();
+        }
+
+        function renderPreview() {
+            const container = document.getElementById('mediaPreviewContainer');
+            container.innerHTML = '';
+            if (selectedFilesToUpload.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+
+            selectedFilesToUpload.forEach((item, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative flex-shrink-0';
+                
+                let mediaEl = document.createElement(item.type === 'image' ? 'img' : 'video');
+                mediaEl.src = item.url;
+                mediaEl.className = 'h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200';
+                
+                const controls = document.createElement('div');
+                controls.className = 'absolute bottom-0 left-0 right-0 bg-black/60 flex justify-between items-center px-2 py-1 rounded-b-lg';
+                
+                const btnLeft = document.createElement('button');
+                btnLeft.type = 'button';
+                btnLeft.innerHTML = '<i class="fa-solid fa-chevron-left text-white text-sm px-1"></i>';
+                btnLeft.onclick = () => moveMedia(index, -1);
+                
+                const btnDel = document.createElement('button');
+                btnDel.type = 'button';
+                btnDel.innerHTML = '<i class="fa-solid fa-trash text-rose-400 text-sm px-1"></i>';
+                btnDel.onclick = () => removeMedia(index);
+
+                const btnRight = document.createElement('button');
+                btnRight.type = 'button';
+                btnRight.innerHTML = '<i class="fa-solid fa-chevron-right text-white text-sm px-1"></i>';
+                btnRight.onclick = () => moveMedia(index, 1);
+
+                controls.appendChild(btnLeft);
+                controls.appendChild(btnDel);
+                controls.appendChild(btnRight);
+                
+                wrapper.appendChild(mediaEl);
+                wrapper.appendChild(controls);
+                container.appendChild(wrapper);
+            });
+        }
+
+        function moveMedia(index, dir) {
+            const newIndex = index + dir;
+            if (newIndex < 0 || newIndex >= selectedFilesToUpload.length) return;
+            const temp = selectedFilesToUpload[index];
+            selectedFilesToUpload[index] = selectedFilesToUpload[newIndex];
+            selectedFilesToUpload[newIndex] = temp;
+            renderPreview();
+        }
+
+        function removeMedia(index) {
+            selectedFilesToUpload.splice(index, 1);
+            renderPreview();
         }
 
         async function submitPost(e) {
@@ -439,9 +487,12 @@
             const statusTxt = document.getElementById('uploadStatusText');
             
             btnSubmit.disabled = true;
-            progressCont.classList.remove('hidden');
-            progressBar.style.width = '0%';
-            progressTxt.textContent = '0%';
+            
+            if (selectedFilesToUpload.length > 0) {
+                progressCont.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressTxt.textContent = '0%';
+            }
 
             const title = document.getElementById('postTitle').value;
             const group = document.getElementById('postGroup').value;
@@ -451,11 +502,11 @@
 
             try {
                 let count = 0;
-                for (let file of selectedFilesToUpload) {
+                for (let item of selectedFilesToUpload) {
                     statusTxt.textContent = `Pujant arxiu ${count + 1} de ${selectedFilesToUpload.length}...`;
-                    const fileExt = file.name.split('.').pop();
+                    const fileExt = item.file.name.split('.').pop();
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                    const { data, error } = await supabaseClient.storage.from('xarxes_photos').upload(fileName, file);
+                    const { data, error } = await supabaseClient.storage.from('xarxes_photos').upload(fileName, item.file);
                     if (error) throw error;
                     const { data: publicUrlData } = supabaseClient.storage.from('xarxes_photos').getPublicUrl(fileName);
                     mediaUrls.push(publicUrlData.publicUrl);
@@ -466,16 +517,18 @@
                     progressTxt.textContent = `${pct}%`;
                 }
 
-                statusTxt.textContent = "Desant dades...";
+                if (selectedFilesToUpload.length > 0) {
+                    statusTxt.textContent = "Desant dades...";
+                }
+                
                 const { error: dbError } = await supabaseClient.from('posts').insert([{ 
                     titol: title, grup: group, descripcio: description, imatges: mediaUrls, estat: 'Pendent', hashtags: defaultHashtags
                 }]);
                 if (dbError) throw dbError;
 
                 document.getElementById('postForm').reset();
-                document.getElementById('mediaPreviewContainer').innerHTML = '';
-                document.getElementById('mediaPreviewContainer').classList.add('hidden');
                 selectedFilesToUpload = [];
+                renderPreview();
                 showToast("Publicació enviada correctament!");
             } catch (error) {
                 showToast("Error pujant els arxius", "error");
@@ -535,6 +588,7 @@
                 container.innerHTML = posts.map(p => {
                     const dateFormatted = new Date(p.created_at).toLocaleDateString('ca-ES');
                     const tags = p.hashtags || '';
+                    const imgsStr = p.imatges ? p.imatges.join(',') : '';
                     return `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : (p.estat === 'Arxivat' ? 'border-slate-300' : 'border-edo-lightblue')}">
                         <div class="flex justify-between items-start gap-2 mb-3">
@@ -552,9 +606,9 @@
                             <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
                                 ${p.imatges.map(url => {
                                     if(url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov') || url.toLowerCase().endsWith('.webm')) {
-                                        return `<video src="${url}" controls class="h-24 w-auto rounded-lg shadow-sm border border-slate-200 flex-shrink-0"></video>`;
+                                        return `<video src="${url}" preload="none" controls class="h-24 w-auto rounded-lg shadow-sm border border-slate-200 flex-shrink-0"></video>`;
                                     }
-                                    return `<img src="${url}" class="h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0">`;
+                                    return `<img src="${url}" loading="lazy" class="h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0">`;
                                 }).join('')}
                             </div>
                         ` : ''}
@@ -563,14 +617,14 @@
                             <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-pen"></i> Editar</button>
                             <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-regular fa-copy"></i> Copiar</button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button id="btnDl_${p.id}" onclick="downloadMedia('${p.imatges.join(',')}', 'btnDl_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar</button>
+                            <button id="btnDl_${p.id}" onclick="downloadMedia('${imgsStr}', 'btnDl_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar</button>
                             ` : ''}
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                             ${showingArchived ? `
                                 <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg hover:bg-slate-300 transition"><i class="fa-solid fa-rotate-left"></i> Restaurar</button>
-                                <button onclick="deletePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="deletePost(${p.id}, '${imgsStr}')" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
                             ` : `
                                 ${p.estat === 'Pendent' ? `
                                     <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg"><i class="fa-solid fa-check"></i> Marcar publicat</button>
@@ -670,12 +724,22 @@
             }
         }
 
-        async function deletePost(id) {
-            if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació definitivament. N'estàs segur/a?")) {
+        async function deletePost(id, imagesStr) {
+            if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació i totes les seves fotos definitivament del servidor. N'estàs segur/a?")) {
                 try { 
+                    if (imagesStr) {
+                        const urls = imagesStr.split(',');
+                        const filenames = urls.map(url => {
+                            const parts = url.split('/');
+                            return parts[parts.length - 1];
+                        });
+                        if (filenames.length > 0) {
+                            await supabaseClient.storage.from('xarxes_photos').remove(filenames);
+                        }
+                    }
                     await supabaseClient.from('posts').delete().eq('id', id); 
                     loadPosts(); 
-                    showToast("Publicació eliminada definitivament");
+                    showToast("Publicació i arxius eliminats definitivament");
                 } catch (e) { showToast("Error a l'eliminar", "error"); }
             }
         }
