@@ -221,23 +221,23 @@
         </div>
     </div>
 
-    <!-- Modal per descarregar fotos directament a la galeria -->
+    <!-- Modal visual per descarregar fotos segur en mòbil/web -->
     <div id="manualDownloadModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
-                <h3 class="font-bold"><i class="fa-solid fa-images"></i> Galeria de fitxers</h3>
+                <h3 class="font-bold"><i class="fa-solid fa-images"></i> Descarregar Arxius</h3>
                 <button onclick="closeManualDownloadModal()" class="text-white text-xl">&times;</button>
             </div>
             <div class="p-3 bg-emerald-50 text-emerald-700 text-sm font-semibold border-b border-emerald-100 flex items-center gap-2">
-                <i class="fa-solid fa-check-circle text-lg"></i> Text copiat correctament!
+                <i class="fa-solid fa-check-circle text-lg"></i> Text copiat correctament al porta-retalls!
             </div>
             <div class="px-4 py-3 text-sm text-edo-gray bg-slate-50 border-b border-slate-200">
-                👇 Per guardar les fotos al rodet: <strong>mantingues premuda</strong> cada imatge i tria "Desar a Fotos", o utilitza el botó de sota.
+                👇 Toca cada botó per descarregar l'arxiu corresponent (o mantingues premuda la foto per desar-la al carret).
             </div>
             <div id="manualDownloadContainer" class="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-100">
             </div>
             <div class="p-4 border-t border-slate-200 flex justify-center bg-white">
-                <button onclick="closeManualDownloadModal()" class="px-6 py-3 bg-edo-darkblue text-white font-bold rounded-xl w-full shadow-sm">Ja ho tinc</button>
+                <button onclick="closeManualDownloadModal()" class="px-6 py-3 bg-edo-darkblue text-white font-bold rounded-xl w-full shadow-sm">Ja ho tinc, tancar</button>
             </div>
         </div>
     </div>
@@ -781,45 +781,36 @@
         }
 
         async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
+            const btn = document.getElementById('btnDl_' + id);
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
+            btn.disabled = true;
+
             const textToCopy = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
             
             try {
                 await navigator.clipboard.writeText(textToCopy);
                 showToast("Text copiat al porta-retalls!");
-            } catch (e) {}
+            } catch (e) {
+                showToast("No s'ha pogut copiar el text", "error");
+            }
 
-            if(!urlsStr) return;
+            if(!urlsStr) {
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Copiat!`;
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+                return;
+            }
+
             const urls = urlsStr.split(',');
 
             if (urls.length === 1) {
-                const btn = document.getElementById('btnDl_' + id);
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                btn.disabled = true;
-                try {
-                    const res = await fetch(urls[0]);
-                    const blob = await res.blob();
-                    const ext = blob.type.split('/')[1] || 'jpeg';
-                    const file = new File([blob], `eDoActiu_media.${ext}`, { type: blob.type });
-                    
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], text: textToCopy });
-                    } else {
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(file);
-                        a.download = file.name;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    }
-                } catch (e) {
-                    openManualDownloadModal(urls);
-                } finally {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                }
+                downloadSingleFile(urls[0]);
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Guardat!`;
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
             } else {
                 openManualDownloadModal(urls);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
         }
 
@@ -838,8 +829,8 @@
                 container.innerHTML += `
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 mb-4 flex flex-col">
                         ${mediaEl}
-                        <button onclick="downloadSingleFile('${url}', ${index})" id="btnModalDl_${index}" class="px-4 py-3 text-edo-darkblue font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition rounded-b-lg">
-                            <i class="fa-solid fa-download"></i> Guardar aquest arxiu
+                        <button onclick="downloadSingleFile('${url}')" class="px-4 py-3 text-edo-darkblue font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition rounded-b-lg">
+                            <i class="fa-solid fa-download"></i> Descarregar arxiu
                         </button>
                     </div>
                 `;
@@ -851,34 +842,15 @@
             document.getElementById('manualDownloadModal').classList.add('hidden');
         }
 
-        async function downloadSingleFile(url, index) {
-            const btn = document.getElementById(`btnModalDl_${index}`);
-            const og = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Guardant...`;
-            btn.disabled = true;
-            try {
-                const res = await fetch(url);
-                const blob = await res.blob();
-                const ext = blob.type.split('/')[1] || 'jpeg';
-                const file = new File([blob], `eDoActiu_media_${index+1}.${ext}`, { type: blob.type });
-                
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file] });
-                } else {
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = file.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(a.href);
-                }
-                btn.innerHTML = `<i class="fa-solid fa-check text-emerald-500"></i> Guardat!`;
-            } catch (e) {
-                btn.innerHTML = og;
-            } finally {
-                setTimeout(() => { btn.disabled = false; }, 2000);
-            }
+        function downloadSingleFile(url) {
+            const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Descàrrega iniciada!");
         }
 
         async function updateStatus(id, st) {
