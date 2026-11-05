@@ -252,7 +252,6 @@
         
         // Memòria segura per a les publicacions
         window.currentPosts = [];
-        window.currentPostId = null;
 
         function showToast(msg, type='success') {
             const t = document.createElement('div');
@@ -687,7 +686,7 @@
                 loader.classList.add('hidden');
 
                 hasMorePosts = (to + 1) < count;
-                window.currentPosts = posts || []; // Emmagatzemem en memòria per seguretat
+                window.currentPosts = posts || []; // Guardem posts actuals a memòria
                 document.getElementById('btnPrev').classList.toggle('invisible', currentPage === 1);
                 document.getElementById('btnNext').classList.toggle('invisible', !hasMorePosts);
 
@@ -751,9 +750,9 @@
             } catch (error) {}
         }
 
-        // Funció central per generar el text segur sense que les cometes trenquin el codi
+        // Funció per generar el text sempre amb seguretat total de l'ID correcte
         function getPostText(id) {
-            const p = window.currentPosts.find(x => x.id === id);
+            const p = window.currentPosts.find(x => x.id == id); // == per evitar problemes d'enter vs text
             if(!p) return "";
             const tags = p.hashtags ? p.hashtags : '';
             return `✨ ${p.titol}\n\n${p.descripcio}\n\n📍 Grup: ${p.grup}\n\n${tags}`;
@@ -765,7 +764,7 @@
         }
 
         function openEditModalById(id) {
-            const p = window.currentPosts.find(x => x.id === id);
+            const p = window.currentPosts.find(x => x.id == id);
             if(!p) return;
             document.getElementById('editId').value = p.id;
             document.getElementById('editTitle').value = p.titol;
@@ -790,8 +789,7 @@
         }
 
         function openPhotoModal(id) {
-            window.currentPostId = id;
-            const p = window.currentPosts.find(x => x.id === id);
+            const p = window.currentPosts.find(x => x.id == id);
             if(!p || !p.imatges) return;
             
             const urls = p.imatges;
@@ -802,7 +800,7 @@
                 html += `
                 <div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
                     <h4 class="font-bold text-edo-darkblue mb-3 text-sm">Opció ràpida (Directe a la galeria)</h4>
-                    <button id="btnDownloadAll" onclick="downloadAllMedia()" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
+                    <button id="btnDownloadAll" onclick="downloadAllMedia(${id})" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
                         <i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})
                     </button>
                     <p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> al menú del teu mòbil per enviar-les directes al carret.</p>
@@ -824,7 +822,7 @@
                 html += `
                 <div class="border border-slate-200 rounded-xl shadow-sm flex flex-col bg-white">
                     ${mediaTag}
-                    <button onclick="downloadSingleMedia('${url}')" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
+                    <button onclick="downloadSingleMedia('${url}', ${id})" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
                         <i class="fa-solid fa-download"></i> Baixar arxiu ${index + 1}
                     </button>
                 </div>
@@ -840,9 +838,8 @@
             document.getElementById('photoModal').classList.add('hidden');
         }
 
-        async function downloadAllMedia() {
-            const id = window.currentPostId;
-            const p = window.currentPosts.find(x => x.id === id);
+        async function downloadAllMedia(id) {
+            const p = window.currentPosts.find(x => x.id == id);
             const urls = p.imatges;
             
             const btn = document.getElementById('btnDownloadAll');
@@ -850,7 +847,7 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
             btn.disabled = true;
 
-            // Auto-copiem el text perquè ja no calgui utilitzar el botó "Copiar text"
+            // Auto-copiem el text del post correcte
             const text = getPostText(id);
             try {
                 await navigator.clipboard.writeText(text);
@@ -884,10 +881,10 @@
             }
         }
 
-        function downloadSingleMedia(url) {
-            // Auto-copiem text per a més comoditat també aquí
-            if(window.currentPostId) {
-                const text = getPostText(window.currentPostId);
+        function downloadSingleMedia(url, id) {
+            // Auto-copiem text amb referència segura a l'ID
+            if(id) {
+                const text = getPostText(id);
                 navigator.clipboard.writeText(text).catch(()=>{});
             }
             const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
@@ -921,11 +918,11 @@
         async function deletePost(id) {
             if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació i totes les seves fotos definitivament del servidor. N'estàs segur/a?")) {
                 try { 
-                    const p = window.currentPosts.find(x => x.id === id);
+                    const p = window.currentPosts.find(x => x.id == id);
                     if (p && p.imatges && p.imatges.length > 0) {
                         const filenames = p.imatges.map(url => {
                             const parts = url.split('/');
-                            return parts[parts.length - 1].split('?')[0]; // assoleix l'esborrat segur de la foto física
+                            return parts[parts.length - 1].split('?')[0];
                         });
                         await supabaseClient.storage.from('xarxes_photos').remove(filenames);
                     }
