@@ -221,7 +221,7 @@
         </div>
     </div>
 
-    <!-- Modal per descarregar fotos directament a la galeria si falla el Share natiu -->
+    <!-- Modal per descarregar fotos directament a la galeria -->
     <div id="manualDownloadModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
@@ -229,10 +229,10 @@
                 <button onclick="closeManualDownloadModal()" class="text-white text-xl">&times;</button>
             </div>
             <div class="p-3 bg-emerald-50 text-emerald-700 text-sm font-semibold border-b border-emerald-100 flex items-center gap-2">
-                <i class="fa-solid fa-check-circle text-lg"></i> El text ja està copiat al porta-retalls!
+                <i class="fa-solid fa-check-circle text-lg"></i> Text copiat correctament!
             </div>
             <div class="px-4 py-3 text-sm text-edo-gray bg-slate-50 border-b border-slate-200">
-                👇 Per guardar les fotos al rodet: <strong>mantingues premuda</strong> cada imatge i tria "Desar a Fotos" o toca el botó de sota.
+                👇 Per guardar les fotos al rodet: <strong>mantingues premuda</strong> cada imatge i tria "Desar a Fotos", o utilitza el botó de sota.
             </div>
             <div id="manualDownloadContainer" class="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-100">
             </div>
@@ -717,7 +717,8 @@
                         ${p.imatges && p.imatges.length > 0 ? `
                             <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
                                 ${p.imatges.map(url => {
-                                    if(url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov') || url.toLowerCase().endsWith('.webm')) {
+                                    const cleanUrl = url.split('?')[0].toLowerCase();
+                                    if(cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) {
                                         return `<video src="${url}" preload="none" controls class="h-24 w-auto rounded-lg shadow-sm border border-slate-200 flex-shrink-0"></video>`;
                                     }
                                     return `<img src="${url}" loading="lazy" class="h-24 w-24 object-cover rounded-lg shadow-sm border border-slate-200 flex-shrink-0">`;
@@ -780,51 +781,45 @@
         }
 
         async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
-            const btn = document.getElementById('btnDl_' + id);
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
-            btn.disabled = true;
-
             const textToCopy = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
             
             try {
                 await navigator.clipboard.writeText(textToCopy);
                 showToast("Text copiat al porta-retalls!");
-            } catch (e) {
-                showToast("Error en copiar el text", "error");
-            }
+            } catch (e) {}
 
-            if(!urlsStr) {
-                btn.innerHTML = `<i class="fa-solid fa-check"></i> Copiat!`;
-                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
-                return;
-            }
-
+            if(!urlsStr) return;
             const urls = urlsStr.split(',');
-            try {
-                const fetchPromises = urls.map(async (url, index) => {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const extension = blob.type.split('/')[1] || 'jpeg';
-                    return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
-                });
-                const filesArray = await Promise.all(fetchPromises);
 
-                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-                    await navigator.share({ files: filesArray });
-                    btn.innerHTML = `<i class="fa-solid fa-check"></i> Fet!`;
-                } else {
+            if (urls.length === 1) {
+                const btn = document.getElementById('btnDl_' + id);
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(urls[0]);
+                    const blob = await res.blob();
+                    const ext = blob.type.split('/')[1] || 'jpeg';
+                    const file = new File([blob], `eDoActiu_media.${ext}`, { type: blob.type });
+                    
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], text: textToCopy });
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(file);
+                        a.download = file.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                } catch (e) {
                     openManualDownloadModal(urls);
+                } finally {
                     btn.innerHTML = originalHtml;
+                    btn.disabled = false;
                 }
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    openManualDownloadModal(urls);
-                }
-                btn.innerHTML = originalHtml;
-            } finally {
-                btn.disabled = false;
-                setTimeout(() => { if(btn.innerHTML.includes('Fet!')) btn.innerHTML = originalHtml; }, 2000);
+            } else {
+                openManualDownloadModal(urls);
             }
         }
 
@@ -833,7 +828,8 @@
             container.innerHTML = '';
             urls.forEach((url, index) => {
                 let mediaEl = '';
-                if(url.toLowerCase().endsWith('.mp4') || url.toLowerCase().endsWith('.mov') || url.toLowerCase().endsWith('.webm')) {
+                const cleanUrl = url.split('?')[0].toLowerCase();
+                if(cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) {
                     mediaEl = `<video src="${url}" controls class="w-full rounded-t-lg border-b border-slate-100 bg-black"></video>`;
                 } else {
                     mediaEl = `<img src="${url}" class="w-full rounded-t-lg border-b border-slate-100 object-contain max-h-64 bg-slate-50">`;
