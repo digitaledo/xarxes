@@ -124,6 +124,12 @@
 
         <section id="view-manager" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+                
+                <div class="flex bg-slate-100 rounded-lg p-1 text-sm font-medium w-full">
+                    <button id="btnTabActive" onclick="toggleArchiveView(false)" class="flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">Actives</button>
+                    <button id="btnTabArchived" onclick="toggleArchiveView(true)" class="flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer">Arxivades</button>
+                </div>
+
                 <div class="flex justify-between items-center gap-2 w-full">
                     <div class="flex items-center gap-2 flex-grow">
                         <label for="filterMonth" class="text-xs font-bold text-edo-gray hidden sm:block">Filtre:</label>
@@ -187,6 +193,7 @@
         let currentPage = 1;
         const itemsPerPage = 5;
         let hasMorePosts = false;
+        let showingArchived = false;
         const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
 
         function showToast(msg, type='success') {
@@ -315,6 +322,20 @@
             showToast("Sessió tancada");
         }
 
+        function toggleArchiveView(isArchived) {
+            showingArchived = isArchived;
+            const btnA = document.getElementById('btnTabActive');
+            const btnAr = document.getElementById('btnTabArchived');
+            if (isArchived) {
+                btnAr.className = 'flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                btnA.className = 'flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer';
+            } else {
+                btnA.className = 'flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
+                btnAr.className = 'flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer';
+            }
+            resetPaginationAndLoad();
+        }
+
         function showView(viewName) {
             if (!userRole) return;
             if (viewName === 'manager' && userRole !== 'manager') return;
@@ -333,7 +354,8 @@
                     btnM.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold';
                     btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
                     document.getElementById('view-manager').classList.remove('hidden');
-                    resetPaginationAndLoad();
+                    showingArchived = false;
+                    toggleArchiveView(false);
                 }
             } else if (userRole === 'teacher') {
                 document.getElementById('view-teacher').classList.remove('hidden');
@@ -478,7 +500,12 @@
             document.getElementById('pageIndicator').textContent = `Pàg ${currentPage}`;
 
             try {
-                let query = supabaseClient.from('posts').select('*', { count: 'exact' }).neq('estat', 'Arxivat');
+                let query = supabaseClient.from('posts').select('*', { count: 'exact' });
+                if (showingArchived) {
+                    query = query.eq('estat', 'Arxivat');
+                } else {
+                    query = query.neq('estat', 'Arxivat');
+                }
                 
                 if (filterM) {
                     const [y, m] = filterM.split('-');
@@ -500,7 +527,8 @@
                 document.getElementById('btnNext').classList.toggle('invisible', !hasMorePosts);
 
                 if (!posts || posts.length === 0) {
-                    container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center border border-dashed border-slate-200"><p class="text-slate-500 font-medium">Cap publicació activa.</p></div>`;
+                    const txt = showingArchived ? "Cap publicació arxivada." : "Cap publicació activa.";
+                    container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center border border-dashed border-slate-200"><p class="text-slate-500 font-medium">${txt}</p></div>`;
                     return;
                 }
 
@@ -508,13 +536,13 @@
                     const dateFormatted = new Date(p.created_at).toLocaleDateString('ca-ES');
                     const tags = p.hashtags || '';
                     return `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : 'border-edo-lightblue'}">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : (p.estat === 'Arxivat' ? 'border-slate-300' : 'border-edo-lightblue')}">
                         <div class="flex justify-between items-start gap-2 mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="bg-slate-100 text-edo-gray font-school text-sm px-3 py-1 rounded-lg font-bold">${p.grup}</span>
                                 <span class="text-xs text-slate-400">${dateFormatted}</span>
                             </div>
-                            <span class="text-xs px-3 py-1 rounded-full font-bold ${p.estat === 'Pendent' ? 'bg-amber-100 text-edo-orange' : 'bg-sky-100 text-edo-darkblue'}">${p.estat}</span>
+                            <span class="text-xs px-3 py-1 rounded-full font-bold ${p.estat === 'Pendent' ? 'bg-amber-100 text-edo-orange' : (p.estat === 'Arxivat' ? 'bg-slate-200 text-slate-500' : 'bg-sky-100 text-edo-darkblue')}">${p.estat}</span>
                         </div>
                         <h3 class="font-bold text-lg text-edo-darkblue mb-2">${p.titol}</h3>
                         <p class="text-sm text-edo-gray mb-2 bg-slate-50 p-3 rounded-xl border border-slate-100 whitespace-pre-wrap">${p.descripcio}</p>
@@ -540,12 +568,17 @@
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                            ${p.estat === 'Pendent' ? `
-                                <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg"><i class="fa-solid fa-check"></i> Marcar publicat</button>
+                            ${showingArchived ? `
+                                <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg hover:bg-slate-300 transition"><i class="fa-solid fa-rotate-left"></i> Restaurar</button>
+                                <button onclick="deletePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
                             ` : `
-                                <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg">Tornar pendent</button>
+                                ${p.estat === 'Pendent' ? `
+                                    <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg"><i class="fa-solid fa-check"></i> Marcar publicat</button>
+                                ` : `
+                                    <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg">Tornar pendent</button>
+                                `}
+                                <button onclick="archivePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg" title="Arxivar"><i class="fa-solid fa-box-archive"></i></button>
                             `}
-                            <button onclick="archivePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-sm rounded-lg" title="Arxivar"><i class="fa-solid fa-box-archive"></i></button>
                         </div>
                     </div>`;
                 }).join('');
@@ -620,7 +653,11 @@
         }
 
         async function updateStatus(id, st) {
-            try { await supabaseClient.from('posts').update({ estat: st }).eq('id', id); loadPosts(); } catch (e) {}
+            try { 
+                await supabaseClient.from('posts').update({ estat: st }).eq('id', id); 
+                loadPosts(); 
+                if(st === 'Pendent') showToast("Publicació restaurada a Pendent");
+            } catch (e) {}
         }
 
         async function archivePost(id) {
@@ -630,6 +667,16 @@
                     loadPosts(); 
                     showToast("Publicació arxivada");
                 } catch (e) { showToast("Error a l'arxivar", "error"); }
+            }
+        }
+
+        async function deletePost(id) {
+            if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació definitivament. N'estàs segur/a?")) {
+                try { 
+                    await supabaseClient.from('posts').delete().eq('id', id); 
+                    loadPosts(); 
+                    showToast("Publicació eliminada definitivament");
+                } catch (e) { showToast("Error a l'eliminar", "error"); }
             }
         }
     </script>
