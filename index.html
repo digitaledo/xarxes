@@ -249,6 +249,10 @@
         let showingArchived = false;
         let defaultHashtags = "#eDoActiu #EscolaEugeniDOrs #Valls #Educació";
         const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
+        
+        // Memòria segura per a les publicacions
+        window.currentPosts = [];
+        window.currentPostId = null;
 
         function showToast(msg, type='success') {
             const t = document.createElement('div');
@@ -683,6 +687,7 @@
                 loader.classList.add('hidden');
 
                 hasMorePosts = (to + 1) < count;
+                window.currentPosts = posts || []; // Emmagatzemem en memòria per seguretat
                 document.getElementById('btnPrev').classList.toggle('invisible', currentPage === 1);
                 document.getElementById('btnNext').classList.toggle('invisible', !hasMorePosts);
 
@@ -695,7 +700,6 @@
                 container.innerHTML = posts.map(p => {
                     const dateFormatted = new Date(p.created_at).toLocaleDateString('ca-ES');
                     const tags = p.hashtags || '';
-                    const imgsStr = p.imatges ? p.imatges.join(',') : '';
                     return `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border ${p.estat === 'Pendent' ? 'border-edo-orange' : (p.estat === 'Arxivat' ? 'border-slate-300' : 'border-edo-lightblue')}">
                         <div class="flex justify-between items-start gap-2 mb-3">
@@ -722,17 +726,17 @@
                         ` : ''}
                         
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                            <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-pen"></i> Editar</button>
-                            <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-regular fa-copy"></i> Copiar text</button>
+                            <button onclick="openEditModalById(${p.id})" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-solid fa-pen"></i> Editar</button>
+                            <button onclick="copyToClipboardById(${p.id})" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg hover:bg-slate-200 transition"><i class="fa-regular fa-copy"></i> Copiar text</button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button onclick="openPhotoModal('${imgsStr}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-edo-lightblue/20 text-edo-darkblue text-sm font-bold rounded-lg hover:bg-edo-lightblue/30 transition"><i class="fa-solid fa-images"></i> Fotos</button>
+                            <button onclick="openPhotoModal(${p.id})" class="flex justify-center items-center gap-2 px-3 py-2 bg-edo-lightblue/20 text-edo-darkblue text-sm font-bold rounded-lg hover:bg-edo-lightblue/30 transition"><i class="fa-solid fa-images"></i> Fotos</button>
                             ` : ''}
                         </div>
 
                         <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
                             ${showingArchived ? `
                                 <button onclick="updateStatus(${p.id}, 'Pendent')" class="px-4 py-2 bg-slate-200 text-edo-gray text-sm font-semibold rounded-lg hover:bg-slate-300 transition"><i class="fa-solid fa-rotate-left"></i> Restaurar</button>
-                                <button onclick="deletePost(${p.id}, '${imgsStr}')" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="deletePost(${p.id})" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition text-sm rounded-lg" title="Eliminar definitivament"><i class="fa-solid fa-trash"></i></button>
                             ` : `
                                 ${p.estat === 'Pendent' ? `
                                     <button onclick="updateStatus(${p.id}, 'Publicat')" class="px-4 py-2 bg-edo-darkblue text-white text-sm font-semibold rounded-lg hover:bg-[#1a4369] transition"><i class="fa-solid fa-check"></i> Marcar publicat</button>
@@ -747,18 +751,33 @@
             } catch (error) {}
         }
 
-        function openEditModal(id, title, desc, tags) {
-            document.getElementById('editId').value = id;
-            document.getElementById('editTitle').value = title;
-            document.getElementById('editDesc').value = desc.replace(/\\n/g, '\n');
-            document.getElementById('editHashtags').value = tags.replace(/\\n/g, '\n');
+        // Funció central per generar el text segur sense que les cometes trenquin el codi
+        function getPostText(id) {
+            const p = window.currentPosts.find(x => x.id === id);
+            if(!p) return "";
+            const tags = p.hashtags ? p.hashtags : '';
+            return `✨ ${p.titol}\n\n${p.descripcio}\n\n📍 Grup: ${p.grup}\n\n${tags}`;
+        }
+
+        function copyToClipboardById(id) {
+            const text = getPostText(id);
+            navigator.clipboard.writeText(text).then(() => showToast("Text copiat al porta-retalls!")).catch(() => showToast("No s'ha pogut copiar el text", "error"));
+        }
+
+        function openEditModalById(id) {
+            const p = window.currentPosts.find(x => x.id === id);
+            if(!p) return;
+            document.getElementById('editId').value = p.id;
+            document.getElementById('editTitle').value = p.titol;
+            document.getElementById('editDesc').value = p.descripcio;
+            document.getElementById('editHashtags').value = p.hashtags || '';
             document.getElementById('editModal').classList.remove('hidden');
         }
 
         function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
         async function saveEdit() {
-            const id = document.getElementById('editId').value;
+            const id = parseInt(document.getElementById('editId').value);
             const titol = document.getElementById('editTitle').value;
             const desc = document.getElementById('editDesc').value;
             const tags = document.getElementById('editHashtags').value;
@@ -770,13 +789,12 @@
             } catch (error) { showToast("Error al desar", "error"); }
         }
 
-        function copyToClipboard(title, desc, group, tags) {
-            const text = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
-            navigator.clipboard.writeText(text).then(() => showToast("Text copiat al porta-retalls!"));
-        }
-
-        function openPhotoModal(urlsStr) {
-            const urls = urlsStr.split(',');
+        function openPhotoModal(id) {
+            window.currentPostId = id;
+            const p = window.currentPosts.find(x => x.id === id);
+            if(!p || !p.imatges) return;
+            
+            const urls = p.imatges;
             const container = document.getElementById('photoModalContent');
             let html = '';
 
@@ -784,10 +802,10 @@
                 html += `
                 <div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
                     <h4 class="font-bold text-edo-darkblue mb-3 text-sm">Opció ràpida (Directe a la galeria)</h4>
-                    <button id="btnDownloadAll" onclick="downloadAllMedia('${urlsStr}')" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
+                    <button id="btnDownloadAll" onclick="downloadAllMedia()" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
                         <i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})
                     </button>
-                    <p class="text-xs text-edo-gray mt-3 leading-relaxed">S'obrirà el menú de compartir del teu mòbil. Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> i s'enviaran directes al teu carret.</p>
+                    <p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> al menú del teu mòbil per enviar-les directes al carret.</p>
                 </div>
                 <hr class="border-slate-200 mb-6">
                 `;
@@ -822,13 +840,23 @@
             document.getElementById('photoModal').classList.add('hidden');
         }
 
-        async function downloadAllMedia(urlsStr) {
+        async function downloadAllMedia() {
+            const id = window.currentPostId;
+            const p = window.currentPosts.find(x => x.id === id);
+            const urls = p.imatges;
+            
             const btn = document.getElementById('btnDownloadAll');
             const ogHtml = btn.innerHTML;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
             btn.disabled = true;
 
-            const urls = urlsStr.split(',');
+            // Auto-copiem el text perquè ja no calgui utilitzar el botó "Copiar text"
+            const text = getPostText(id);
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast("Text auto-copiat! Preparant fotos...");
+            } catch(e) {}
+
             try {
                 const fetchPromises = urls.map(async (url, index) => {
                     const response = await fetch(url);
@@ -857,6 +885,11 @@
         }
 
         function downloadSingleMedia(url) {
+            // Auto-copiem text per a més comoditat també aquí
+            if(window.currentPostId) {
+                const text = getPostText(window.currentPostId);
+                navigator.clipboard.writeText(text).catch(()=>{});
+            }
             const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
             const a = document.createElement('a');
             a.href = downloadUrl;
@@ -864,7 +897,7 @@
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            showToast("Descàrrega iniciada!");
+            showToast("Descàrrega iniciada (Text copiat!)");
         }
 
         async function updateStatus(id, st) {
@@ -885,18 +918,16 @@
             }
         }
 
-        async function deletePost(id, imagesStr) {
+        async function deletePost(id) {
             if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació i totes les seves fotos definitivament del servidor. N'estàs segur/a?")) {
                 try { 
-                    if (imagesStr) {
-                        const urls = imagesStr.split(',');
-                        const filenames = urls.map(url => {
+                    const p = window.currentPosts.find(x => x.id === id);
+                    if (p && p.imatges && p.imatges.length > 0) {
+                        const filenames = p.imatges.map(url => {
                             const parts = url.split('/');
-                            return parts[parts.length - 1];
+                            return parts[parts.length - 1].split('?')[0]; // assoleix l'esborrat segur de la foto física
                         });
-                        if (filenames.length > 0) {
-                            await supabaseClient.storage.from('xarxes_photos').remove(filenames);
-                        }
+                        await supabaseClient.storage.from('xarxes_photos').remove(filenames);
                     }
                     await supabaseClient.from('posts').delete().eq('id', id); 
                     loadPosts(); 
