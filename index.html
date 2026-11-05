@@ -82,17 +82,17 @@
                 <form id="postForm" onsubmit="submitPost(event)" class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-edo-gray mb-1">Títol de l'activitat *</label>
-                        <input type="text" id="postTitle" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+                        <input type="text" id="postTitle" oninput="saveDraft()" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
                     </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-edo-gray mb-1">Grup *</label>
-                        <select id="postGroup" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></select>
+                        <select id="postGroup" onchange="saveDraft()" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></select>
                     </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-edo-gray mb-1">Text suggerit *</label>
-                        <textarea id="postDescription" required rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+                        <textarea id="postDescription" oninput="saveDraft()" required rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
                     </div>
 
                     <div>
@@ -221,7 +221,6 @@
         </div>
     </div>
 
-    <!-- Modal per descarregar fotos -->
     <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
@@ -229,7 +228,6 @@
                 <button onclick="closePhotoModal()" class="text-white text-xl">&times;</button>
             </div>
             <div id="photoModalContent" class="p-4 overflow-y-auto flex-grow bg-slate-50">
-                <!-- S'omple per JS -->
             </div>
             <div class="p-4 border-t border-slate-200 bg-white">
                 <button onclick="closePhotoModal()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl w-full shadow-sm transition">Tancar galeria</button>
@@ -247,11 +245,17 @@
         const itemsPerPage = 5;
         let hasMorePosts = false;
         let showingArchived = false;
-        let defaultHashtags = "#eDoActiu #EscolaEugeniDOrs #Valls #Educació";
-        const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
+        let defaultHashtags = "#someugenidors #escolaeugenidors #Valls #Educació";
         
-        // Memòria segura per a les publicacions
+        const groupsList = [
+            "Tota l'escola", 
+            "Educació infantil", "I3", "I3 A", "I3 B", "I4", "I4 A", "I4 B", "I5", "I5 A", "I5 B", 
+            "Educació primària", "1r", "1r A", "1r B", "2n", "2n A", "2n B", "3r", "3r A", "3r B", 
+            "4t", "4t A", "4t B", "5è", "5è A", "5è B", "6è", "6è A", "6è B"
+        ];
+        
         window.currentPosts = [];
+        window.currentPostId = null;
 
         function showToast(msg, type='success') {
             const t = document.createElement('div');
@@ -264,6 +268,27 @@
                 t.classList.add('opacity-0'); 
                 setTimeout(()=>t.remove(), 300); 
             }, 3000);
+        }
+
+        function saveDraft() {
+            localStorage.setItem('edo_draft_title', document.getElementById('postTitle').value);
+            localStorage.setItem('edo_draft_group', document.getElementById('postGroup').value);
+            localStorage.setItem('edo_draft_desc', document.getElementById('postDescription').value);
+        }
+
+        function loadDraft() {
+            const t = localStorage.getItem('edo_draft_title');
+            const g = localStorage.getItem('edo_draft_group');
+            const d = localStorage.getItem('edo_draft_desc');
+            if(t) document.getElementById('postTitle').value = t;
+            if(g) document.getElementById('postGroup').value = g;
+            if(d) document.getElementById('postDescription').value = d;
+        }
+
+        function clearDraft() {
+            localStorage.removeItem('edo_draft_title');
+            localStorage.removeItem('edo_draft_group');
+            localStorage.removeItem('edo_draft_desc');
         }
 
         function initPWA() {
@@ -304,6 +329,8 @@
                 opt.value = g; opt.textContent = g;
                 selectGroup.appendChild(opt);
             });
+
+            loadDraft();
 
             const yearSelect = document.getElementById('filterYear');
             const currentYear = new Date().getFullYear();
@@ -630,6 +657,7 @@
                 if (dbError) throw dbError;
 
                 document.getElementById('postForm').reset();
+                clearDraft();
                 selectedFilesToUpload = [];
                 renderPreview();
                 showToast("Publicació enviada correctament!");
@@ -686,7 +714,7 @@
                 loader.classList.add('hidden');
 
                 hasMorePosts = (to + 1) < count;
-                window.currentPosts = posts || []; // Guardem posts actuals a memòria
+                window.currentPosts = posts || [];
                 document.getElementById('btnPrev').classList.toggle('invisible', currentPage === 1);
                 document.getElementById('btnNext').classList.toggle('invisible', !hasMorePosts);
 
@@ -750,9 +778,8 @@
             } catch (error) {}
         }
 
-        // Funció per generar el text sempre amb seguretat total de l'ID correcte
         function getPostText(id) {
-            const p = window.currentPosts.find(x => x.id == id); // == per evitar problemes d'enter vs text
+            const p = window.currentPosts.find(x => x.id == id);
             if(!p) return "";
             const tags = p.hashtags ? p.hashtags : '';
             return `✨ ${p.titol}\n\n${p.descripcio}\n\n📍 Grup: ${p.grup}\n\n${tags}`;
@@ -789,6 +816,7 @@
         }
 
         function openPhotoModal(id) {
+            window.currentPostId = id;
             const p = window.currentPosts.find(x => x.id == id);
             if(!p || !p.imatges) return;
             
@@ -800,7 +828,7 @@
                 html += `
                 <div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
                     <h4 class="font-bold text-edo-darkblue mb-3 text-sm">Opció ràpida (Directe a la galeria)</h4>
-                    <button id="btnDownloadAll" onclick="downloadAllMedia(${id})" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
+                    <button id="btnDownloadAll" onclick="downloadAllMedia()" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
                         <i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})
                     </button>
                     <p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> al menú del teu mòbil per enviar-les directes al carret.</p>
@@ -822,7 +850,7 @@
                 html += `
                 <div class="border border-slate-200 rounded-xl shadow-sm flex flex-col bg-white">
                     ${mediaTag}
-                    <button onclick="downloadSingleMedia('${url}', ${id})" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
+                    <button onclick="downloadSingleMedia('${url}')" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
                         <i class="fa-solid fa-download"></i> Baixar arxiu ${index + 1}
                     </button>
                 </div>
@@ -838,7 +866,8 @@
             document.getElementById('photoModal').classList.add('hidden');
         }
 
-        async function downloadAllMedia(id) {
+        async function downloadAllMedia() {
+            const id = window.currentPostId;
             const p = window.currentPosts.find(x => x.id == id);
             const urls = p.imatges;
             
@@ -847,7 +876,6 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
             btn.disabled = true;
 
-            // Auto-copiem el text del post correcte
             const text = getPostText(id);
             try {
                 await navigator.clipboard.writeText(text);
@@ -881,10 +909,9 @@
             }
         }
 
-        function downloadSingleMedia(url, id) {
-            // Auto-copiem text amb referència segura a l'ID
-            if(id) {
-                const text = getPostText(id);
+        function downloadSingleMedia(url) {
+            if(window.currentPostId) {
+                const text = getPostText(window.currentPostId);
                 navigator.clipboard.writeText(text).catch(()=>{});
             }
             const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
