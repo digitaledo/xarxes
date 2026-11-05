@@ -133,10 +133,25 @@
                     <button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Hashtags"><i class="fa-solid fa-hashtag text-lg"></i></button>
                 </div>
 
-                <div class="flex justify-between items-center gap-2 w-full">
-                    <div class="flex items-center gap-2 flex-grow">
-                        <label for="filterMonth" class="text-xs font-bold text-edo-gray hidden sm:block">Filtre:</label>
-                        <input type="month" id="filterMonth" onchange="resetPaginationAndLoad()" class="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none min-w-[150px]">
+                <div class="flex justify-between items-center gap-2 w-full flex-wrap sm:flex-nowrap">
+                    <div class="flex items-center gap-2 flex-grow w-full sm:w-auto">
+                        <select id="filterMonth" onchange="resetPaginationAndLoad()" class="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+                            <option value="">Tot l'any</option>
+                            <option value="01">Gener</option>
+                            <option value="02">Febrer</option>
+                            <option value="03">Març</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maig</option>
+                            <option value="06">Juny</option>
+                            <option value="07">Juliol</option>
+                            <option value="08">Agost</option>
+                            <option value="09">Setembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Desembre</option>
+                        </select>
+                        <select id="filterYear" onchange="resetPaginationAndLoad()" class="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+                        </select>
                     </div>
                     <button onclick="resetPaginationAndLoad()" class="text-edo-darkblue bg-edo-lightblue/20 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0"><i class="fa-solid fa-rotate-right"></i></button>
                 </div>
@@ -206,23 +221,23 @@
         </div>
     </div>
 
-    <!-- Modal manual per descarregar diverses fotos amb seguretat al mòbil -->
+    <!-- Modal per descarregar fotos directament a la galeria si falla el Share natiu -->
     <div id="manualDownloadModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
-                <h3 class="font-bold"><i class="fa-solid fa-download"></i> Guardar Arxius</h3>
+                <h3 class="font-bold"><i class="fa-solid fa-images"></i> Galeria de fitxers</h3>
                 <button onclick="closeManualDownloadModal()" class="text-white text-xl">&times;</button>
             </div>
-            <div class="p-4 bg-emerald-50 text-emerald-700 text-sm font-semibold border-b border-emerald-100 flex items-center gap-2">
-                <i class="fa-solid fa-check-circle text-lg"></i> Text copiat correctament!
+            <div class="p-3 bg-emerald-50 text-emerald-700 text-sm font-semibold border-b border-emerald-100 flex items-center gap-2">
+                <i class="fa-solid fa-check-circle text-lg"></i> El text ja està copiat al porta-retalls!
             </div>
-            <div class="px-4 py-3 text-sm text-edo-gray font-medium bg-slate-50">
-                👇 Toca el botó de sota per guardar cada arxiu. En mòbils Apple, també pots <strong>mantenir premuda</strong> la imatge uns segons i triar "Descarregar" o "Guardar a Fotos".
+            <div class="px-4 py-3 text-sm text-edo-gray bg-slate-50 border-b border-slate-200">
+                👇 Per guardar les fotos al rodet: <strong>mantingues premuda</strong> cada imatge i tria "Desar a Fotos" o toca el botó de sota.
             </div>
             <div id="manualDownloadContainer" class="p-4 space-y-4 overflow-y-auto flex-grow bg-slate-100">
             </div>
             <div class="p-4 border-t border-slate-200 flex justify-center bg-white">
-                <button onclick="closeManualDownloadModal()" class="px-6 py-3 bg-edo-darkblue text-white font-bold rounded-xl w-full shadow-sm">Fet, tancar</button>
+                <button onclick="closeManualDownloadModal()" class="px-6 py-3 bg-edo-darkblue text-white font-bold rounded-xl w-full shadow-sm">Ja ho tinc</button>
             </div>
         </div>
     </div>
@@ -284,14 +299,24 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             initPWA();
+            
+            const selectGroup = document.getElementById('postGroup');
+            groupsList.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g; opt.textContent = g;
+                selectGroup.appendChild(opt);
+            });
+
+            const yearSelect = document.getElementById('filterYear');
+            const currentYear = new Date().getFullYear();
+            for(let i = currentYear - 1; i <= currentYear + 2; i++) {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = i;
+                if(i === currentYear) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+
             try {
-                const select = document.getElementById('postGroup');
-                groupsList.forEach(g => {
-                    const opt = document.createElement('option');
-                    opt.value = g;
-                    opt.textContent = g;
-                    select.appendChild(opt);
-                });
                 if (window.supabase) {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -357,6 +382,7 @@
             const btn = document.getElementById('btnLogin');
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
             const pass = document.getElementById('appPassword').value;
             
             let res = await supabaseClient.auth.signInWithPassword({ email: 'docent@eugenidors.com', password: pass });
@@ -626,6 +652,7 @@
             const container = document.getElementById('postsContainer');
             const loader = document.getElementById('loadingIndicator');
             const filterM = document.getElementById('filterMonth').value;
+            const filterY = document.getElementById('filterYear').value;
             
             container.innerHTML = '';
             loader.classList.remove('hidden');
@@ -639,10 +666,16 @@
                     query = query.neq('estat', 'Arxivat');
                 }
                 
-                if (filterM) {
-                    const [y, m] = filterM.split('-');
+                if (filterM && filterY) {
+                    const y = parseInt(filterY);
+                    const m = parseInt(filterM);
                     const start = new Date(y, m-1, 1).toISOString();
                     const end = new Date(y, m, 0, 23, 59, 59).toISOString();
+                    query = query.gte('created_at', start).lte('created_at', end);
+                } else if (!filterM && filterY) {
+                    const y = parseInt(filterY);
+                    const start = new Date(y, 0, 1).toISOString();
+                    const end = new Date(y, 11, 31, 23, 59, 59).toISOString();
                     query = query.gte('created_at', start).lte('created_at', end);
                 }
 
@@ -749,44 +782,49 @@
         async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
             const btn = document.getElementById('btnDl_' + id);
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> Copiat!`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
+            btn.disabled = true;
 
             const textToCopy = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
             
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                showToast("Text copiat! Preparant arxius...");
+                showToast("Text copiat al porta-retalls!");
             } catch (e) {
-                showToast("Text no copiat automàticament", "error");
+                showToast("Error en copiar el text", "error");
             }
 
-            setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+            if(!urlsStr) {
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> Copiat!`;
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+                return;
+            }
 
-            if(!urlsStr) return;
             const urls = urlsStr.split(',');
+            try {
+                const fetchPromises = urls.map(async (url, index) => {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const extension = blob.type.split('/')[1] || 'jpeg';
+                    return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
+                });
+                const filesArray = await Promise.all(fetchPromises);
 
-            if (urls.length === 1) {
-                try {
-                    const res = await fetch(urls[0]);
-                    const blob = await res.blob();
-                    const ext = blob.type.split('/')[1] || 'jpeg';
-                    const file = new File([blob], `eDoActiu_media.${ext}`, { type: blob.type });
-                    
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ files: [file], text: textToCopy });
-                    } else {
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(file);
-                        a.download = file.name;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                    }
-                } catch (e) {
+                if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                    await navigator.share({ files: filesArray });
+                    btn.innerHTML = `<i class="fa-solid fa-check"></i> Fet!`;
+                } else {
+                    openManualDownloadModal(urls);
+                    btn.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
                     openManualDownloadModal(urls);
                 }
-            } else {
-                openManualDownloadModal(urls);
+                btn.innerHTML = originalHtml;
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { if(btn.innerHTML.includes('Fet!')) btn.innerHTML = originalHtml; }, 2000);
             }
         }
 
