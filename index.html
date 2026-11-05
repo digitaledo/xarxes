@@ -179,7 +179,7 @@
     <div id="toastContainer" class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
     <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex suflex-col max-h-[90vh]">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
                 <h3 class="font-bold">Editar Publicació</h3>
                 <button onclick="closeEditModal()" class="text-white text-xl">&times;</button>
@@ -216,7 +216,7 @@
         const itemsPerPage = 5;
         let hasMorePosts = false;
         let showingArchived = false;
-        let defaultHashtags = "#someugenidors #escolaeugenidors #Valls #educació";
+        let defaultHashtags = "#eDoActiu #EscolaEugeniDOrs #Valls #Educació";
         const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
 
         function showToast(msg, type='success') {
@@ -678,7 +678,7 @@
                             <button onclick="openEditModal(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-pen"></i> Editar</button>
                             <button onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-regular fa-copy"></i> Copiar text</button>
                             ${p.imatges && p.imatges.length > 0 ? `
-                            <button id="btnDl_${p.id}" onclick="copyToClipboard('${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}'); downloadMedia('${imgsStr}', 'btnDl_${p.id}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar i copiar</button>
+                            <button id="btnDl_${p.id}" onclick="handleSaveAndCopy(${p.id}, '${p.titol.replace(/'/g, "\\'")}', '${p.descripcio.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${p.grup}', '${tags.replace(/\n/g, "\\n").replace(/'/g, "\\'")}', '${imgsStr}')" class="flex justify-center items-center gap-2 px-3 py-2 bg-slate-100 text-edo-darkblue text-sm font-semibold rounded-lg"><i class="fa-solid fa-download"></i> Guardar i copiar</button>
                             ` : ''}
                         </div>
 
@@ -728,6 +728,19 @@
             navigator.clipboard.writeText(text).then(() => showToast("Text copiat!"));
         }
 
+        async function handleSaveAndCopy(id, title, desc, group, tags, urlsStr) {
+            const text = `✨ ${title}\n\n${desc.replace(/\\n/g, '\n')}\n\n📍 Grup: ${group}\n\n${tags.replace(/\\n/g, '\n')}`;
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast("Text copiat al porta-retalls!");
+            } catch (e) {
+                showToast("Error en copiar el text", "error");
+            }
+            if(urlsStr) {
+                await downloadMedia(urlsStr, 'btnDl_' + id);
+            }
+        }
+
         async function downloadMedia(urlsStr, btnId) {
             const btn = document.getElementById(btnId);
             const og = btn.innerHTML;
@@ -741,7 +754,7 @@
                         const res = await fetch(urls[i]);
                         const blob = await res.blob();
                         const ext = blob.type.split('/')[1] || 'jpeg';
-                        filesArray.push(new File([blob], `edoactiu_${i}.${ext}`, { type: blob.type }));
+                        filesArray.push(new File([blob], `edoactiu_${i+1}.${ext}`, { type: blob.type }));
                     }
                     if (navigator.canShare({ files: filesArray })) {
                         await navigator.share({ files: filesArray });
@@ -755,13 +768,20 @@
                     const blob = await res.blob();
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = `media_${i}`;
+                    const ext = urls[i].split('.').pop().split('?')[0] || 'jpg';
+                    a.download = `eDoActiu_media_${i+1}.${ext}`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    await new Promise(r => setTimeout(r, 600));
+                    URL.revokeObjectURL(a.href);
+                    if (i < urls.length - 1) {
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
                 }
-            } catch (error) {} finally {
+            } catch (error) {
+                console.error(error);
+                showToast("Descàrrega/Compartició cancel·lada", "error");
+            } finally {
                 btn.innerHTML = og;
                 btn.disabled = false;
             }
