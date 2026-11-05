@@ -130,7 +130,7 @@
                         <button id="btnTabActive" onclick="toggleArchiveView(false)" class="flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">Actives</button>
                         <button id="btnTabArchived" onclick="toggleArchiveView(true)" class="flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer">Arxivades</button>
                     </div>
-                    <button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Configuració"><i class="fa-solid fa-gear"></i></button>
+                    <button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Hashtags"><i class="fa-solid fa-hashtag text-lg"></i></button>
                 </div>
 
                 <div class="flex justify-between items-center gap-2 w-full">
@@ -158,18 +158,18 @@
         <section id="view-settings" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-school text-xl font-bold text-edo-darkblue">Configuració</h2>
+                    <h2 class="font-school text-xl font-bold text-edo-darkblue">Hashtags i Opcions</h2>
                     <button onclick="showView('manager')" class="text-edo-gray hover:text-edo-darkblue text-sm font-bold"><i class="fa-solid fa-arrow-left"></i> Tornar</button>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-semibold text-edo-gray mb-2">Hashtags per defecte</label>
                     <textarea id="configHashtags" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
-                    <p class="text-xs text-slate-500 mt-2">Aquests hashtags s'afegiran automàticament a totes les noves publicacions enviades pels docents.</p>
+                    <p class="text-xs text-slate-500 mt-2">En guardar, els nous hashtags s'aplicaran a les noves publicacions i a <strong>totes les publicacions pendents</strong> automàticament.</p>
                 </div>
 
-                <button onclick="saveSettings()" class="w-full mt-6 py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar canvis
+                <button onclick="saveSettings()" id="btnSaveSettings" class="w-full mt-6 py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar i actualitzar pendents
                 </button>
             </div>
         </section>
@@ -216,7 +216,7 @@
         const itemsPerPage = 5;
         let hasMorePosts = false;
         let showingArchived = false;
-        let defaultHashtags = "#eDoActiu #EscolaEugeniDOrs #Valls #Educació";
+        let defaultHashtags = "#someugenidors #escolaeugenidors #Valls #educació";
         const groupsList = ["Tota l'escola", "I3 A", "I3 B", "I4 A", "I4 B", "I5 A", "I5 B", "1r A", "1r B", "2n A", "2n B", "3r A", "3r B", "4t A", "4t B", "5è A", "5è B", "6è A", "6è B"];
 
         function showToast(msg, type='success') {
@@ -291,14 +291,24 @@
         }
 
         async function saveSettings() {
+            const btnSave = document.getElementById('btnSaveSettings');
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardant...';
             const newTags = document.getElementById('configHashtags').value;
+            
             try {
                 await supabaseClient.from('settings').upsert({ id: 1, hashtags: newTags });
                 defaultHashtags = newTags;
-                showToast("Configuració desada");
+                
+                await supabaseClient.from('posts').update({ hashtags: newTags }).eq('estat', 'Pendent');
+
+                showToast("Dades desades i publicacions actualitzades!");
                 showView('manager');
             } catch (e) {
                 showToast("Error al desar", "error");
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar i actualitzar pendents';
             }
         }
 
