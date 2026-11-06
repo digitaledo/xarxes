@@ -214,7 +214,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 </div>
 </div>
 
-<!-- Modal compacte de l'Editor Lliure de Marca d'Aigua -->
 <div id="wmEditorModal" class="fixed inset-0 bg-slate-900/95 hidden z-[300] flex flex-col">
 <div class="flex justify-between items-center p-3 bg-edo-darkblue text-white shadow-md z-20">
 <h3 class="font-bold text-sm">🎨 Editor marca d'aigua</h3>
@@ -224,14 +223,12 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 <div id="wmPreviewWrap" class="relative inline-block shadow-2xl">
 <img id="wmPreviewImg" class="max-w-full max-h-[60vh] object-contain pointer-events-none select-none block">
 
-<!-- Caixa mòbil 1: El Logo -->
 <div id="wmDraggableLogo" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 85%; top: 85%; transform: translate(-50%, -50%);">
-<img id="wmPreviewLogo" class="pointer-events-none select-none drop-shadow-md w-auto h-auto">
+<img id="wmPreviewLogo" class="pointer-events-none select-none drop-shadow-md h-auto max-w-none">
 </div>
 
-<!-- Caixa mòbil 2: El Text -->
-<div id="wmDraggableText" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 50%; top: 85%; transform: translate(-50%, -50%); whitespace: nowrap;">
-<span id="wmPreviewText" class="font-oswald font-medium pointer-events-none select-none leading-none" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);"></span>
+<div id="wmDraggableText" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors whitespace-nowrap" style="left: 50%; top: 85%; transform: translate(-50%, -50%);">
+<span id="wmPreviewText" class="font-oswald font-medium pointer-events-none select-none leading-none max-w-none" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);"></span>
 </div>
 </div>
 </div>
@@ -247,11 +244,11 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 
 <div class="col-span-6 mt-1">
 <label class="block font-bold text-edo-gray mb-1">Mida logo:</label>
-<input type="range" id="wmEditorLogoSize" min="5" max="50" value="15" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
+<input type="range" id="wmEditorLogoSize" min="5" max="100" value="15" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
 </div>
 <div class="col-span-6 mt-1">
 <label class="block font-bold text-edo-gray mb-1">Mida text:</label>
-<input type="range" id="wmEditorTextSize" min="2" max="25" value="8" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
+<input type="range" id="wmEditorTextSize" min="2" max="50" value="8" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
 </div>
 </div>
 <div class="flex gap-2 mt-3">
@@ -261,7 +258,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 </div>
 </div>
 
-<!-- L'arxiu Javascript separat -->
 <script src="app.js"></script>
 
 </body>
