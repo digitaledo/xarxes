@@ -562,27 +562,29 @@ const canvas = document.createElement('canvas'); canvas.width = img.width; canva
 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
 const hasText = projectText && projectText !== 'NOMES_LOGO' && projectText !== '';
 const theText = hasText ? projectText : '';
+
+const paddingY = canvas.height * 0.03;
+const paddingX = canvas.width * 0.03;
+
 if (defaultLogoUrl) {
 try {
 const wm = new Image(); wm.crossOrigin = 'anonymous'; wm.src = defaultLogoUrl;
 await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
-const targetHeight = canvas.height * 0.12; 
-const wmHeight = targetHeight;
-const wmWidth = (wm.width / wm.height) * wmHeight;
-const padding = canvas.width * 0.04;
-const wmX = canvas.width - wmWidth - padding;
-const wmY = canvas.height - wmHeight - padding;
+const wmWidth = canvas.width * 0.15;
+const wmHeight = (wm.height / wm.width) * wmWidth;
+const wmX = canvas.width - wmWidth - paddingX;
+const wmY = canvas.height - wmHeight - paddingY;
 ctx.drawImage(wm, wmX, wmY, wmWidth, wmHeight);
 if (hasText) {
 const fontSize = wmHeight * 0.6; 
 ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`; ctx.fillStyle = textColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-ctx.fillText(theText, wmX - padding, wmY + (wmHeight/2));
+ctx.fillText(theText, wmX - (canvas.width * 0.02), wmY + (wmHeight/2));
 }
 } catch(e) {}
 } else if (hasText) {
-const fontSize = Math.max(30, canvas.height * 0.08);
+const fontSize = canvas.height * 0.08;
 ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`; ctx.fillStyle = textColor; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-ctx.fillText(theText, canvas.width - (canvas.width * 0.04), canvas.height - (canvas.width * 0.04));
+ctx.fillText(theText, canvas.width - paddingX, canvas.height - paddingY);
 }
 canvas.toBlob(blob => { resolve(blob); }, 'image/jpeg', 0.95);
 };
@@ -639,7 +641,7 @@ try {
 const fetchPromises = urls.map(async (url, index) => {
 const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
 let blob;
-if (index === 0 && !isVideo && projectText !== "") blob = await applyWatermark(url, projectText, textColor);
+if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && defaultLogoUrl))) blob = await applyWatermark(url, projectText, textColor);
 else { const response = await fetch(url); blob = await response.blob(); }
 const extension = blob.type.split('/')[1] || 'jpeg';
 return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
@@ -656,7 +658,7 @@ if(id) navigator.clipboard.writeText(getPostText(id)).catch(()=>{});
 const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
 const { projectText, textColor } = getWatermarkParams();
 try {
-if (index === 0 && !isVideo && projectText !== "") {
+if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && defaultLogoUrl))) {
 const finalBlob = await applyWatermark(url, projectText, textColor);
 const a = document.createElement('a'); a.href = URL.createObjectURL(finalBlob); a.download = `eDoActiu_media_1.jpeg`; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("Descàrrega iniciada!");
 } else {
