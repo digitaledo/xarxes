@@ -13,7 +13,13 @@ let defaultLogoUrl = "";
 const groupsList = ["Tota l'escola", "Educació infantil", "I3", "I3 A", "I3 B", "I4", "I4 A", "I4 B", "I5", "I5 A", "I5 B", "Educació primària", "1r", "1r A", "1r B", "2n", "2n A", "2n B", "3r", "3r A", "3r B", "4t", "4t A", "4t B", "5è", "5è A", "5è B", "6è", "6è A", "6è B"];
 window.currentPosts = [];
 window.currentPostId = null;
-window.wmSettings = { active: false, text: '', color: '#ffffff', logoSize: 15, textSize: 6 };
+
+// L'estat ara desa les posicions (X, Y) de forma 100% independent per logo i text
+window.wmSettings = { 
+    active: false, text: '', color: '#ffffff', 
+    logoSize: 15, textSize: 6, 
+    logoX: 85, logoY: 85, textX: 50, textY: 85 
+};
 
 function showToast(msg, type='success') {
     const t = document.createElement('div');
@@ -51,8 +57,45 @@ function initPWA() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
 }
 
+// Funció per fer els elements independents arrossegables
+function makeDraggable(elId) {
+    const dragEl = document.getElementById(elId);
+    if(!dragEl) return;
+    let isDragging = false, startX, startY, startLeft, startTop;
+    
+    function onStart(e) {
+        if(e.target !== dragEl && !dragEl.contains(e.target)) return;
+        isDragging = true;
+        const ev = e.touches ? e.touches[0] : e;
+        startX = ev.clientX; startY = ev.clientY;
+        startLeft = parseFloat(dragEl.style.left || 50); 
+        startTop = parseFloat(dragEl.style.top || 50);
+    }
+    function onMove(e) {
+        if(!isDragging) return;
+        e.preventDefault();
+        const ev = e.touches ? e.touches[0] : e;
+        const container = document.getElementById('wmPreviewWrap');
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        const newLeft = startLeft + (dx / container.offsetWidth * 100);
+        const newTop = startTop + (dy / container.offsetHeight * 100);
+        dragEl.style.left = Math.max(0, Math.min(newLeft, 100)) + '%';
+        dragEl.style.top = Math.max(0, Math.min(newTop, 100)) + '%';
+    }
+    function onEnd() { isDragging = false; }
+    
+    dragEl.addEventListener('mousedown', onStart); 
+    dragEl.addEventListener('touchstart', onStart, {passive: false});
+    document.addEventListener('mousemove', onMove, {passive: false}); 
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('mouseup', onEnd); 
+    document.addEventListener('touchend', onEnd);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initPWA();
+    makeDraggable('wmDraggableLogo');
+    makeDraggable('wmDraggableText');
     const selectGroup = document.getElementById('postGroup');
     groupsList.forEach(g => { const opt = document.createElement('option'); opt.value = g; opt.textContent = g; selectGroup.appendChild(opt); });
     loadDraft();
@@ -353,7 +396,7 @@ window.handleWmEditorSelect = function() {
     const sel = document.getElementById('wmEditorSelect');
     if(sel.value === 'CUSTOM') document.getElementById('wmEditorCustom').classList.remove('hidden');
     else document.getElementById('wmEditorCustom').classList.add('hidden');
-    updateWmEditorPreview();
+    window.updateWmEditorPreview();
 };
 
 window.updateWmEditorPreview = function() {
@@ -366,32 +409,28 @@ window.updateWmEditorPreview = function() {
     
     const logoEl = document.getElementById('wmPreviewLogo');
     const textEl = document.getElementById('wmPreviewText');
-    const dragEl = document.getElementById('wmDraggable');
+    const dragLogoEl = document.getElementById('wmDraggableLogo');
+    const dragTextEl = document.getElementById('wmDraggableText');
     
-    // Assegurem la posició ancorada abaix a la dreta i el text a l'esquerra del logo
-    dragEl.style.left = 'auto';
-    dragEl.style.top = 'auto';
-    dragEl.style.right = '4%';
-    dragEl.style.bottom = '4%';
-    dragEl.style.flexDirection = 'row-reverse';
-    dragEl.style.alignItems = 'center';
-    
-    if(sel === '') { dragEl.classList.add('hidden'); return; }
-    dragEl.classList.remove('hidden');
+    if(sel === '') { 
+        dragLogoEl.classList.add('hidden'); 
+        dragTextEl.classList.add('hidden'); 
+        return; 
+    }
     
     if(defaultLogoUrl && textStr !== 'NOMES_TEXT') {
         logoEl.src = defaultLogoUrl; 
         logoEl.style.height = (containerH * (logoSzPct/100)) + 'px';
         logoEl.style.width = 'auto'; 
-        logoEl.classList.remove('hidden');
-    } else logoEl.classList.add('hidden');
+        dragLogoEl.classList.remove('hidden');
+    } else dragLogoEl.classList.add('hidden');
     
     if(textStr && textStr !== 'NOMES_LOGO') {
         textEl.textContent = textStr; 
         textEl.style.color = color; 
         textEl.style.fontSize = (containerH * (textSzPct/100)) + 'px'; 
-        textEl.classList.remove('hidden');
-    } else textEl.classList.add('hidden');
+        dragTextEl.classList.remove('hidden');
+    } else dragTextEl.classList.add('hidden');
 };
 
 window.openWmEditor = function() {
@@ -413,24 +452,33 @@ window.openWmEditor = function() {
     
     document.getElementById('wmEditorSelect').innerHTML = projectOptions;
     
-    if(wmSettings.active) {
-        if(wmSettings.text !== '' && wmSettings.text !== 'NOMES_LOGO') {
+    if(window.wmSettings.active) {
+        if(window.wmSettings.text !== '' && window.wmSettings.text !== 'NOMES_LOGO') {
             let found = false;
-            projs.forEach(proj => { if(proj === wmSettings.text) found = true; });
-            if(found) document.getElementById('wmEditorSelect').value = `PREDEF_${wmSettings.text}`;
-            else { document.getElementById('wmEditorSelect').value = 'CUSTOM'; document.getElementById('wmEditorCustom').value = wmSettings.text; document.getElementById('wmEditorCustom').classList.remove('hidden'); }
-        } else if(wmSettings.text === 'NOMES_LOGO') document.getElementById('wmEditorSelect').value = 'NOMES_LOGO';
+            projs.forEach(proj => { if(proj === window.wmSettings.text) found = true; });
+            if(found) document.getElementById('wmEditorSelect').value = `PREDEF_${window.wmSettings.text}`;
+            else { document.getElementById('wmEditorSelect').value = 'CUSTOM'; document.getElementById('wmEditorCustom').value = window.wmSettings.text; document.getElementById('wmEditorCustom').classList.remove('hidden'); }
+        } else if(window.wmSettings.text === 'NOMES_LOGO') document.getElementById('wmEditorSelect').value = 'NOMES_LOGO';
         
-        document.getElementById('wmEditorColor').value = wmSettings.color;
-        document.getElementById('wmEditorLogoSize').value = wmSettings.logoSize;
-        document.getElementById('wmEditorTextSize').value = wmSettings.textSize;
+        document.getElementById('wmEditorColor').value = window.wmSettings.color;
+        document.getElementById('wmEditorLogoSize').value = window.wmSettings.logoSize;
+        document.getElementById('wmEditorTextSize').value = window.wmSettings.textSize;
+        
+        document.getElementById('wmDraggableLogo').style.left = window.wmSettings.logoX + '%';
+        document.getElementById('wmDraggableLogo').style.top = window.wmSettings.logoY + '%';
+        document.getElementById('wmDraggableText').style.left = window.wmSettings.textX + '%';
+        document.getElementById('wmDraggableText').style.top = window.wmSettings.textY + '%';
     } else {
         document.getElementById('wmEditorSelect').value = '';
         document.getElementById('wmEditorCustom').classList.add('hidden');
+        document.getElementById('wmDraggableLogo').style.left = '85%';
+        document.getElementById('wmDraggableLogo').style.top = '85%';
+        document.getElementById('wmDraggableText').style.left = '50%';
+        document.getElementById('wmDraggableText').style.top = '85%';
     }
     
     document.getElementById('wmEditorModal').classList.remove('hidden');
-    setTimeout(updateWmEditorPreview, 100);
+    setTimeout(window.updateWmEditorPreview, 100);
 };
 
 window.closeWmEditor = function() { document.getElementById('wmEditorModal').classList.add('hidden'); };
@@ -438,25 +486,30 @@ window.closeWmEditor = function() { document.getElementById('wmEditorModal').cla
 window.saveWmSettings = function() {
     const sel = document.getElementById('wmEditorSelect').value;
     if(sel === '') {
-        wmSettings.active = false;
+        window.wmSettings.active = false;
         document.getElementById('wmStatusBadge').textContent = 'Desactivada';
         document.getElementById('wmStatusBadge').className = 'text-xs px-2 py-1 bg-slate-100 text-slate-500 rounded font-bold';
     } else {
-        wmSettings.active = true;
-        wmSettings.text = sel === 'CUSTOM' ? document.getElementById('wmEditorCustom').value : (sel.startsWith('PREDEF_') ? sel.replace('PREDEF_', '') : 'NOMES_LOGO');
-        wmSettings.color = document.getElementById('wmEditorColor').value;
-        wmSettings.logoSize = parseFloat(document.getElementById('wmEditorLogoSize').value);
-        wmSettings.textSize = parseFloat(document.getElementById('wmEditorTextSize').value);
+        window.wmSettings.active = true;
+        window.wmSettings.text = sel === 'CUSTOM' ? document.getElementById('wmEditorCustom').value : (sel.startsWith('PREDEF_') ? sel.replace('PREDEF_', '') : 'NOMES_LOGO');
+        window.wmSettings.color = document.getElementById('wmEditorColor').value;
+        window.wmSettings.logoSize = parseFloat(document.getElementById('wmEditorLogoSize').value);
+        window.wmSettings.textSize = parseFloat(document.getElementById('wmEditorTextSize').value);
+        window.wmSettings.logoX = parseFloat(document.getElementById('wmDraggableLogo').style.left);
+        window.wmSettings.logoY = parseFloat(document.getElementById('wmDraggableLogo').style.top);
+        window.wmSettings.textX = parseFloat(document.getElementById('wmDraggableText').style.left);
+        window.wmSettings.textY = parseFloat(document.getElementById('wmDraggableText').style.top);
+        
         document.getElementById('wmStatusBadge').textContent = 'Activada (llista per baixar)';
         document.getElementById('wmStatusBadge').className = 'text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded font-bold';
     }
-    closeWmEditor();
+    window.closeWmEditor();
 };
 
 window.openPhotoModal = function(id) {
     window.currentPostId = id; const p = currentPosts.find(x => x.id == id);
     if(!p || !p.imatges) return;
-    wmSettings.active = false;
+    window.wmSettings.active = false;
     const urls = p.imatges, container = document.getElementById('photoModalContent');
     let html = `
 <div class="mb-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -496,40 +549,42 @@ async function applyWatermarkDynamic(imageUrl) {
             img.onload = async () => {
                 const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
-                if(!wmSettings.active) { canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95); return; }
+                if(!window.wmSettings.active) { canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95); return; }
                 
-                const { text, color, logoSize, textSize } = wmSettings;
-                
-                // Càlcul de marges 100% ancorats
-                const paddingX = canvas.width * 0.04; 
-                const paddingY = canvas.height * 0.04;
+                const { text, color, logoSize, textSize, logoX, logoY, textX, textY } = window.wmSettings;
 
                 if (defaultLogoUrl && text !== 'NOMES_TEXT') {
                     try {
                         const wm = new Image(); wm.crossOrigin = 'anonymous'; wm.src = defaultLogoUrl;
                         await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
                         
-                        // Mida logo basada rigorosament en l'alçada per garantir l'escala
                         const wmHeight = canvas.height * (logoSize / 100);
                         const wmWidth = (wm.width / wm.height) * wmHeight;
                         
-                        const wmX = canvas.width - wmWidth - paddingX;
-                        const wmY = canvas.height - wmHeight - paddingY;
+                        // Centrar la imatge basat en els eixos X i Y de l'estat
+                        const wmFinalX = (canvas.width * (logoX / 100)) - (wmWidth / 2);
+                        const wmFinalY = (canvas.height * (logoY / 100)) - (wmHeight / 2);
                         
-                        ctx.drawImage(wm, wmX, wmY, wmWidth, wmHeight);
-                        
-                        if (text && text !== 'NOMES_LOGO') {
-                            const fSize = canvas.height * (textSize / 100);
-                            ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                            // El text creix cap a l'esquerra del logotip
-                            ctx.fillText(text, wmX - (canvas.width * 0.015), wmY + (wmHeight / 2));
-                        }
+                        ctx.drawImage(wm, wmFinalX, wmFinalY, wmWidth, wmHeight);
                     } catch(e) {}
-                } else if (text && text !== 'NOMES_LOGO') {
-                    const fSize = canvas.height * (textSize / 100);
-                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    ctx.fillText(text, canvas.width - paddingX, canvas.height - paddingY);
                 }
+                
+                if (text && text !== 'NOMES_LOGO') {
+                    const fSize = canvas.height * (textSize / 100);
+                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; 
+                    ctx.fillStyle = color; 
+                    ctx.textAlign = 'center'; 
+                    ctx.textBaseline = 'middle'; 
+                    ctx.shadowColor = "rgba(0,0,0,0.7)"; 
+                    ctx.shadowBlur = Math.max(4, fSize*0.1); 
+                    ctx.shadowOffsetX = 2; 
+                    ctx.shadowOffsetY = 2;
+                    
+                    const tFinalX = canvas.width * (textX / 100);
+                    const tFinalY = canvas.height * (textY / 100);
+                    ctx.fillText(text, tFinalX, tFinalY);
+                }
+                
                 canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.95);
             };
             img.onerror = () => reject(); img.src = imageUrl;
@@ -545,7 +600,7 @@ window.downloadAllMedia = async function(id) {
         const fetchPromises = urls.map(async (url, index) => {
             const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
             let blob;
-            if (index === 0 && !isVideo && wmSettings.active) blob = await applyWatermarkDynamic(url);
+            if (index === 0 && !isVideo && window.wmSettings.active) blob = await applyWatermarkDynamic(url);
             else { const response = await fetch(url); blob = await response.blob(); }
             const extension = blob.type.split('/')[1] || 'jpeg';
             return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
@@ -562,7 +617,7 @@ window.downloadSingleMedia = async function(url, id, index) {
     if(id) navigator.clipboard.writeText(getPostText(id)).catch(()=>{});
     const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
     try {
-        if (index === 0 && !isVideo && wmSettings.active) {
+        if (index === 0 && !isVideo && window.wmSettings.active) {
             const finalBlob = await applyWatermarkDynamic(url);
             const a = document.createElement('a'); a.href = URL.createObjectURL(finalBlob); a.download = `eDoActiu_media_1.jpeg`; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("Descàrrega iniciada!");
         } else {
