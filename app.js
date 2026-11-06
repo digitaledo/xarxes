@@ -14,7 +14,6 @@ const groupsList = ["Tota l'escola", "Educació infantil", "I3", "I3 A", "I3 B",
 window.currentPosts = [];
 window.currentPostId = null;
 
-// Memòria independent per a posicions de text i logotip
 window.wmSettings = { 
     active: false, text: '', color: '#ffffff', 
     logoSize: 15, textSize: 8, 
@@ -57,7 +56,6 @@ function initPWA() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
 }
 
-// Funció per fer els elements independents arrossegables
 function makeDraggable(elId) {
     const dragEl = document.getElementById(elId);
     if(!dragEl) return;
@@ -413,11 +411,9 @@ window.updateWmEditorPreview = function() {
         return; 
     }
     
-    // El logo es basa en l'amplada de l'escala
     if(defaultLogoUrl && textStr !== 'NOMES_TEXT') {
         logoEl.src = defaultLogoUrl; 
         logoEl.style.width = (containerW * (logoSzPct/100)) + 'px';
-        logoEl.style.height = 'auto'; 
         dragLogoEl.classList.remove('hidden');
     } else dragLogoEl.classList.add('hidden');
     
