@@ -214,56 +214,54 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 </div>
 </div>
 
-<!-- Modal de l'Editor Lliure de Marca d'Aigua -->
+<!-- Modal compacte de l'Editor Lliure de Marca d'Aigua -->
 <div id="wmEditorModal" class="fixed inset-0 bg-slate-900/95 hidden z-[300] flex flex-col">
-<div class="flex justify-between items-center p-4 bg-edo-darkblue text-white shadow-md">
-<h3 class="font-bold">🎨 Editor marca d'aigua</h3>
-<button onclick="closeWmEditor()" class="text-white text-xl">&times;</button>
+<div class="flex justify-between items-center p-3 bg-edo-darkblue text-white shadow-md z-20">
+<h3 class="font-bold text-sm">🎨 Editor marca d'aigua</h3>
+<button onclick="closeWmEditor()" class="text-white text-2xl leading-none">&times;</button>
 </div>
 <div class="flex-grow flex items-center justify-center bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfALEAkPwwQG1M+BgYGBgYGFgYGBgYGFgYGBgYGFgYGBgYGFgYGADyKxEB493B2gAAAABJRU5ErkJggg==')] overflow-hidden p-2 relative select-none">
-<div id="wmPreviewWrap" class="relative max-w-full max-h-full shadow-2xl">
-<img id="wmPreviewImg" class="max-w-full max-h-[55vh] object-contain pointer-events-none select-none block">
+<div id="wmPreviewWrap" class="relative inline-block shadow-2xl">
+<img id="wmPreviewImg" class="max-w-full max-h-[60vh] object-contain pointer-events-none select-none block">
 
 <!-- Caixa mòbil 1: El Logo -->
 <div id="wmDraggableLogo" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 85%; top: 85%; transform: translate(-50%, -50%);">
-<img id="wmPreviewLogo" class="pointer-events-none select-none drop-shadow-md">
+<img id="wmPreviewLogo" class="pointer-events-none select-none drop-shadow-md w-auto h-auto">
 </div>
 
 <!-- Caixa mòbil 2: El Text -->
-<div id="wmDraggableText" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 50%; top: 85%; transform: translate(-50%, -50%);">
-<span id="wmPreviewText" class="font-oswald font-medium pointer-events-none select-none" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);"></span>
+<div id="wmDraggableText" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 50%; top: 85%; transform: translate(-50%, -50%); whitespace: nowrap;">
+<span id="wmPreviewText" class="font-oswald font-medium pointer-events-none select-none leading-none" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);"></span>
+</div>
+</div>
+</div>
+<div class="bg-white p-3 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 shrink-0">
+<div class="grid grid-cols-12 gap-2 text-xs items-center">
+<div class="col-span-10">
+<select id="wmEditorSelect" onchange="handleWmEditorSelect()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-edo-lightblue"></select>
+<input type="text" id="wmEditorCustom" oninput="updateWmEditorPreview()" placeholder="Escriu el text aquí..." class="hidden mt-2 w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-edo-lightblue">
+</div>
+<div class="col-span-2 flex justify-end">
+<input type="color" id="wmEditorColor" value="#ffffff" oninput="updateWmEditorPreview()" class="w-8 h-8 rounded cursor-pointer border-0 p-0 shadow-sm">
 </div>
 
-</div>
-</div>
-<div class="bg-white p-4 space-y-4 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.3)] max-h-[45vh] overflow-y-auto">
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-<div>
-<label class="block text-xs font-bold text-edo-gray mb-1">Projecte / text lliure:</label>
-<select id="wmEditorSelect" onchange="handleWmEditorSelect()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm mb-2 font-medium focus:ring-2 focus:ring-edo-lightblue"></select>
-<input type="text" id="wmEditorCustom" oninput="updateWmEditorPreview()" placeholder="Escriu el text aquí..." class="hidden w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-edo-lightblue">
-</div>
-<div>
-<label class="block text-xs font-bold text-edo-gray mb-1">Color del text:</label>
-<input type="color" id="wmEditorColor" value="#ffffff" oninput="updateWmEditorPreview()" class="w-full h-9 rounded cursor-pointer border-0 p-0 shadow-sm">
-</div>
-<div>
-<label class="block text-xs font-bold text-edo-gray mb-1">Mida logo:</label>
+<div class="col-span-6 mt-1">
+<label class="block font-bold text-edo-gray mb-1">Mida logo:</label>
 <input type="range" id="wmEditorLogoSize" min="5" max="50" value="15" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
 </div>
-<div>
-<label class="block text-xs font-bold text-edo-gray mb-1">Mida text:</label>
-<input type="range" id="wmEditorTextSize" min="2" max="25" value="6" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
+<div class="col-span-6 mt-1">
+<label class="block font-bold text-edo-gray mb-1">Mida text:</label>
+<input type="range" id="wmEditorTextSize" min="2" max="25" value="8" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
 </div>
 </div>
-<div class="flex gap-3 pt-2">
-<button onclick="closeWmEditor()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl text-sm transition">Cancel·lar</button>
-<button onclick="saveWmSettings()" class="flex-1 py-3.5 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Aplicar i guardar</button>
+<div class="flex gap-2 mt-3">
+<button onclick="closeWmEditor()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl transition">Cancel·lar</button>
+<button onclick="saveWmSettings()" class="flex-[2] py-2 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl transition flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Aplicar</button>
 </div>
-<p class="text-[10px] text-center text-slate-400 italic">Arrossega i ajusta el logotip i el text de manera independent.</p>
 </div>
 </div>
 
+<!-- L'arxiu Javascript separat -->
 <script src="app.js"></script>
 
 </body>
