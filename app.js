@@ -14,10 +14,10 @@ const groupsList = ["Tota l'escola", "Educació infantil", "I3", "I3 A", "I3 B",
 window.currentPosts = [];
 window.currentPostId = null;
 
-// L'estat ara desa les posicions (X, Y) de forma 100% independent per logo i text
+// Memòria independent per a posicions de text i logotip
 window.wmSettings = { 
     active: false, text: '', color: '#ffffff', 
-    logoSize: 15, textSize: 6, 
+    logoSize: 15, textSize: 8, 
     logoX: 85, logoY: 85, textX: 50, textY: 85 
 };
 
@@ -387,11 +387,6 @@ async function saveEdit() {
     try { await supabaseClient.from('posts').update({ titol: titol, descripcio: desc, hashtags: tags }).eq('id', id); closeEditModal(); loadPosts(); showToast("Modificacions desades"); } catch (error) { showToast("Error al desar", "error"); }
 }
 
-window.toggleCustomText = function() {
-    const sel = document.getElementById('wmEditorSelect'), inp = document.getElementById('wmEditorCustom');
-    if(sel && inp) { if(sel.value === 'CUSTOM') inp.classList.remove('hidden'); else inp.classList.add('hidden'); }
-};
-
 window.handleWmEditorSelect = function() {
     const sel = document.getElementById('wmEditorSelect');
     if(sel.value === 'CUSTOM') document.getElementById('wmEditorCustom').classList.remove('hidden');
@@ -405,7 +400,7 @@ window.updateWmEditorPreview = function() {
     const color = document.getElementById('wmEditorColor').value;
     const logoSzPct = parseFloat(document.getElementById('wmEditorLogoSize').value);
     const textSzPct = parseFloat(document.getElementById('wmEditorTextSize').value);
-    const containerH = document.getElementById('wmPreviewWrap').offsetHeight;
+    const containerW = document.getElementById('wmPreviewWrap').offsetWidth;
     
     const logoEl = document.getElementById('wmPreviewLogo');
     const textEl = document.getElementById('wmPreviewText');
@@ -418,17 +413,18 @@ window.updateWmEditorPreview = function() {
         return; 
     }
     
+    // El logo es basa en l'amplada de l'escala
     if(defaultLogoUrl && textStr !== 'NOMES_TEXT') {
         logoEl.src = defaultLogoUrl; 
-        logoEl.style.height = (containerH * (logoSzPct/100)) + 'px';
-        logoEl.style.width = 'auto'; 
+        logoEl.style.width = (containerW * (logoSzPct/100)) + 'px';
+        logoEl.style.height = 'auto'; 
         dragLogoEl.classList.remove('hidden');
     } else dragLogoEl.classList.add('hidden');
     
     if(textStr && textStr !== 'NOMES_LOGO') {
         textEl.textContent = textStr; 
         textEl.style.color = color; 
-        textEl.style.fontSize = (containerH * (textSzPct/100)) + 'px'; 
+        textEl.style.fontSize = (containerW * (textSzPct/100)) + 'px'; 
         dragTextEl.classList.remove('hidden');
     } else dragTextEl.classList.add('hidden');
 };
@@ -558,10 +554,9 @@ async function applyWatermarkDynamic(imageUrl) {
                         const wm = new Image(); wm.crossOrigin = 'anonymous'; wm.src = defaultLogoUrl;
                         await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
                         
-                        const wmHeight = canvas.height * (logoSize / 100);
-                        const wmWidth = (wm.width / wm.height) * wmHeight;
+                        const wmWidth = canvas.width * (logoSize / 100);
+                        const wmHeight = wmWidth * (wm.naturalHeight / wm.naturalWidth);
                         
-                        // Centrar la imatge basat en els eixos X i Y de l'estat
                         const wmFinalX = (canvas.width * (logoX / 100)) - (wmWidth / 2);
                         const wmFinalY = (canvas.height * (logoY / 100)) - (wmHeight / 2);
                         
@@ -570,7 +565,7 @@ async function applyWatermarkDynamic(imageUrl) {
                 }
                 
                 if (text && text !== 'NOMES_LOGO') {
-                    const fSize = canvas.height * (textSize / 100);
+                    const fSize = canvas.width * (textSize / 100);
                     ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; 
                     ctx.fillStyle = color; 
                     ctx.textAlign = 'center'; 
