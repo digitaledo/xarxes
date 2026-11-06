@@ -13,7 +13,7 @@ let defaultLogoUrl = "";
 const groupsList = ["Tota l'escola", "Educació infantil", "I3", "I3 A", "I3 B", "I4", "I4 A", "I4 B", "I5", "I5 A", "I5 B", "Educació primària", "1r", "1r A", "1r B", "2n", "2n A", "2n B", "3r", "3r A", "3r B", "4t", "4t A", "4t B", "5è", "5è A", "5è B", "6è", "6è A", "6è B"];
 window.currentPosts = [];
 window.currentPostId = null;
-window.wmSettings = { active: false, text: '', color: '#ffffff', logoSize: 15, textSize: 6, x: 70, y: 75 };
+window.wmSettings = { active: false, text: '', color: '#ffffff', logoSize: 15, textSize: 6 };
 
 function showToast(msg, type='success') {
     const t = document.createElement('div');
@@ -51,35 +51,8 @@ function initPWA() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
 }
 
-let isDragging = false, dragStartX = 0, dragStartY = 0, startLeft = 0, startTop = 0;
-function initDragSystem() {
-    const dragEl = document.getElementById('wmDraggable');
-    function onStart(e) {
-        isDragging = true;
-        const ev = e.touches ? e.touches[0] : e;
-        dragStartX = ev.clientX; dragStartY = ev.clientY;
-        startLeft = parseFloat(dragEl.style.left || 70); startTop = parseFloat(dragEl.style.top || 75);
-    }
-    function onMove(e) {
-        if(!isDragging) return;
-        e.preventDefault();
-        const ev = e.touches ? e.touches[0] : e;
-        const dx = ev.clientX - dragStartX, dy = ev.clientY - dragStartY;
-        const container = document.getElementById('wmPreviewWrap');
-        const newLeft = startLeft + (dx / container.offsetWidth * 100);
-        const newTop = startTop + (dy / container.offsetHeight * 100);
-        dragEl.style.left = Math.max(0, Math.min(newLeft, 95)) + '%';
-        dragEl.style.top = Math.max(0, Math.min(newTop, 95)) + '%';
-    }
-    function onEnd() { isDragging = false; }
-    dragEl.addEventListener('mousedown', onStart); dragEl.addEventListener('touchstart', onStart, {passive: false});
-    document.addEventListener('mousemove', onMove, {passive: false}); document.addEventListener('touchmove', onMove, {passive: false});
-    document.addEventListener('mouseup', onEnd); document.addEventListener('touchend', onEnd);
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
     initPWA();
-    initDragSystem();
     const selectGroup = document.getElementById('postGroup');
     groupsList.forEach(g => { const opt = document.createElement('option'); opt.value = g; opt.textContent = g; selectGroup.appendChild(opt); });
     loadDraft();
@@ -389,21 +362,35 @@ window.updateWmEditorPreview = function() {
     const color = document.getElementById('wmEditorColor').value;
     const logoSzPct = parseFloat(document.getElementById('wmEditorLogoSize').value);
     const textSzPct = parseFloat(document.getElementById('wmEditorTextSize').value);
-    const containerW = document.getElementById('wmPreviewWrap').offsetWidth;
     const containerH = document.getElementById('wmPreviewWrap').offsetHeight;
+    
     const logoEl = document.getElementById('wmPreviewLogo');
     const textEl = document.getElementById('wmPreviewText');
     const dragEl = document.getElementById('wmDraggable');
+    
+    // Assegurem la posició ancorada abaix a la dreta i el text a l'esquerra del logo
+    dragEl.style.left = 'auto';
+    dragEl.style.top = 'auto';
+    dragEl.style.right = '4%';
+    dragEl.style.bottom = '4%';
+    dragEl.style.flexDirection = 'row-reverse';
+    dragEl.style.alignItems = 'center';
     
     if(sel === '') { dragEl.classList.add('hidden'); return; }
     dragEl.classList.remove('hidden');
     
     if(defaultLogoUrl && textStr !== 'NOMES_TEXT') {
-        logoEl.src = defaultLogoUrl; logoEl.style.width = (containerW * (logoSzPct/100)) + 'px'; logoEl.classList.remove('hidden');
+        logoEl.src = defaultLogoUrl; 
+        logoEl.style.height = (containerH * (logoSzPct/100)) + 'px';
+        logoEl.style.width = 'auto'; 
+        logoEl.classList.remove('hidden');
     } else logoEl.classList.add('hidden');
     
     if(textStr && textStr !== 'NOMES_LOGO') {
-        textEl.textContent = textStr; textEl.style.color = color; textEl.style.fontSize = (containerH * (textSzPct/100)) + 'px'; textEl.classList.remove('hidden');
+        textEl.textContent = textStr; 
+        textEl.style.color = color; 
+        textEl.style.fontSize = (containerH * (textSzPct/100)) + 'px'; 
+        textEl.classList.remove('hidden');
     } else textEl.classList.add('hidden');
 };
 
@@ -437,8 +424,6 @@ window.openWmEditor = function() {
         document.getElementById('wmEditorColor').value = wmSettings.color;
         document.getElementById('wmEditorLogoSize').value = wmSettings.logoSize;
         document.getElementById('wmEditorTextSize').value = wmSettings.textSize;
-        document.getElementById('wmDraggable').style.left = wmSettings.x + '%';
-        document.getElementById('wmDraggable').style.top = wmSettings.y + '%';
     } else {
         document.getElementById('wmEditorSelect').value = '';
         document.getElementById('wmEditorCustom').classList.add('hidden');
@@ -462,8 +447,6 @@ window.saveWmSettings = function() {
         wmSettings.color = document.getElementById('wmEditorColor').value;
         wmSettings.logoSize = parseFloat(document.getElementById('wmEditorLogoSize').value);
         wmSettings.textSize = parseFloat(document.getElementById('wmEditorTextSize').value);
-        wmSettings.x = parseFloat(document.getElementById('wmDraggable').style.left);
-        wmSettings.y = parseFloat(document.getElementById('wmDraggable').style.top);
         document.getElementById('wmStatusBadge').textContent = 'Activada (llista per baixar)';
         document.getElementById('wmStatusBadge').className = 'text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded font-bold';
     }
@@ -514,24 +497,38 @@ async function applyWatermarkDynamic(imageUrl) {
                 const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
                 if(!wmSettings.active) { canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95); return; }
-                const { text, color, logoSize, textSize, x, y } = wmSettings;
-                const wmX = canvas.width * (x / 100); const wmY = canvas.height * (y / 100);
+                
+                const { text, color, logoSize, textSize } = wmSettings;
+                
+                // Càlcul de marges 100% ancorats
+                const paddingX = canvas.width * 0.04; 
+                const paddingY = canvas.height * 0.04;
+
                 if (defaultLogoUrl && text !== 'NOMES_TEXT') {
                     try {
                         const wm = new Image(); wm.crossOrigin = 'anonymous'; wm.src = defaultLogoUrl;
                         await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
-                        const wmWidth = canvas.width * (logoSize / 100); const wmHeight = (wm.height / wm.width) * wmWidth;
+                        
+                        // Mida logo basada rigorosament en l'alçada per garantir l'escala
+                        const wmHeight = canvas.height * (logoSize / 100);
+                        const wmWidth = (wm.width / wm.height) * wmHeight;
+                        
+                        const wmX = canvas.width - wmWidth - paddingX;
+                        const wmY = canvas.height - wmHeight - paddingY;
+                        
                         ctx.drawImage(wm, wmX, wmY, wmWidth, wmHeight);
+                        
                         if (text && text !== 'NOMES_LOGO') {
                             const fSize = canvas.height * (textSize / 100);
-                            ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                            ctx.fillText(text, wmX + wmWidth + (canvas.width * 0.015), wmY + (wmHeight / 2));
+                            ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+                            // El text creix cap a l'esquerra del logotip
+                            ctx.fillText(text, wmX - (canvas.width * 0.015), wmY + (wmHeight / 2));
                         }
                     } catch(e) {}
                 } else if (text && text !== 'NOMES_LOGO') {
                     const fSize = canvas.height * (textSize / 100);
-                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    ctx.fillText(text, wmX, wmY);
+                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
+                    ctx.fillText(text, canvas.width - paddingX, canvas.height - paddingY);
                 }
                 canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.95);
             };
