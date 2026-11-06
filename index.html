@@ -12,7 +12,10 @@
     <link rel="apple-touch-icon" href="logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tipografies (Inclou Oswald per a la marca d'aigua) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&family=Oswald:wght@500&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
@@ -26,7 +29,8 @@
                     },
                     fontFamily: {
                         'sans': ['Inter', 'sans-serif'],
-                        'school': ['Fredoka', 'cursive', 'sans-serif']
+                        'school': ['Fredoka', 'cursive', 'sans-serif'],
+                        'oswald': ['Oswald', 'sans-serif']
                     }
                 }
             }
@@ -130,7 +134,7 @@
                         <button id="btnTabActive" onclick="toggleArchiveView(false)" class="flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">Actives</button>
                         <button id="btnTabArchived" onclick="toggleArchiveView(true)" class="flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer">Arxivades</button>
                     </div>
-                    <button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Hashtags"><i class="fa-solid fa-hashtag text-lg"></i></button>
+                    <button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Configuració"><i class="fa-solid fa-gear text-lg"></i></button>
                 </div>
 
                 <div class="flex justify-between items-center gap-2 w-full flex-wrap sm:flex-nowrap">
@@ -173,19 +177,39 @@
         <section id="view-settings" class="hidden space-y-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-school text-xl font-bold text-edo-darkblue">Hashtags i Opcions</h2>
+                    <h2 class="font-school text-xl font-bold text-edo-darkblue">Configuració de Gestió</h2>
                     <button onclick="showView('manager')" class="text-edo-gray hover:text-edo-darkblue text-sm font-bold"><i class="fa-solid fa-arrow-left"></i> Tornar</button>
                 </div>
                 
-                <div>
-                    <label class="block text-sm font-semibold text-edo-gray mb-2">Hashtags per defecte</label>
-                    <textarea id="configHashtags" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
-                    <p class="text-xs text-slate-500 mt-2">En guardar, els nous hashtags s'aplicaran a les noves publicacions i a <strong>totes les publicacions pendents</strong> automàticament.</p>
+                <div class="space-y-5">
+                    <!-- Hashtags -->
+                    <div>
+                        <label class="block text-sm font-semibold text-edo-gray mb-2">Hashtags per defecte</label>
+                        <textarea id="configHashtags" rows="2" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+                    </div>
+
+                    <hr class="border-slate-100">
+
+                    <!-- Projectes / Marca d'aigua -->
+                    <div>
+                        <h3 class="font-bold text-edo-darkblue mb-3 text-sm"><i class="fa-solid fa-stamp"></i> Marca d'aigua (Projectes interns)</h3>
+                        <label class="block text-xs font-semibold text-edo-gray mb-1">Noms dels projectes (separats per comes)</label>
+                        <textarea id="configProjects" rows="2" placeholder="CETE+, Escola verda, STEAM" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+                        
+                        <label class="block text-xs font-semibold text-edo-gray mt-4 mb-1">Pujar nou Logo (PNG transparent)</label>
+                        <input type="file" id="configWatermark" accept="image/png" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        
+                        <div id="currentWatermarkContainer" class="mt-3 hidden p-3 bg-slate-50 rounded-xl border border-slate-200 inline-block">
+                            <p class="text-xs text-slate-400 font-bold mb-2">Logo actual en ús:</p>
+                            <img id="currentWatermarkImg" src="" class="h-12 object-contain">
+                        </div>
+                    </div>
                 </div>
 
                 <button onclick="saveSettings()" id="btnSaveSettings" class="w-full mt-6 py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar i actualitzar pendents
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar configuració
                 </button>
+                <p class="text-[10px] text-slate-400 text-center mt-3">En guardar, els hashtags nous s'aplicaran a totes les publicacions pendents.</p>
             </div>
         </section>
 
@@ -221,6 +245,7 @@
         </div>
     </div>
 
+    <!-- Modal per descarregar fotos -->
     <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
             <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
@@ -228,6 +253,7 @@
                 <button onclick="closePhotoModal()" class="text-white text-xl">&times;</button>
             </div>
             <div id="photoModalContent" class="p-4 overflow-y-auto flex-grow bg-slate-50">
+                <!-- S'omple per JS -->
             </div>
             <div class="p-4 border-t border-slate-200 bg-white">
                 <button onclick="closePhotoModal()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl w-full shadow-sm transition">Tancar galeria</button>
@@ -245,7 +271,10 @@
         const itemsPerPage = 5;
         let hasMorePosts = false;
         let showingArchived = false;
+        
         let defaultHashtags = "#someugenidors #escolaeugenidors #Valls #Educació";
+        let defaultProjects = "CETE+, Escola verda, STEAM";
+        let defaultLogoUrl = "";
         
         const groupsList = [
             "Tota l'escola", 
@@ -354,9 +383,11 @@
 
         async function loadSettings() {
             try {
-                const { data, error } = await supabaseClient.from('settings').select('hashtags').eq('id', 1).single();
-                if (data && data.hashtags) {
-                    defaultHashtags = data.hashtags;
+                const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+                if (data) {
+                    if (data.hashtags) defaultHashtags = data.hashtags;
+                    if (data.projectes) defaultProjects = data.projectes;
+                    if (data.logo_url) defaultLogoUrl = data.logo_url;
                 }
             } catch (e) {}
         }
@@ -365,19 +396,42 @@
             const btnSave = document.getElementById('btnSaveSettings');
             btnSave.disabled = true;
             btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardant...';
+            
             const newTags = document.getElementById('configHashtags').value;
+            const newProjects = document.getElementById('configProjects').value;
+            const fileInput = document.getElementById('configWatermark');
+            let newLogoUrl = defaultLogoUrl;
             
             try {
-                await supabaseClient.from('settings').upsert({ id: 1, hashtags: newTags });
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const fileName = `watermark_${Date.now()}.png`;
+                    const { data, error } = await supabaseClient.storage.from('xarxes_photos').upload(fileName, file);
+                    if (!error) {
+                        const { data: publicUrlData } = supabaseClient.storage.from('xarxes_photos').getPublicUrl(fileName);
+                        newLogoUrl = publicUrlData.publicUrl;
+                    }
+                }
+
+                await supabaseClient.from('settings').upsert({ 
+                    id: 1, 
+                    hashtags: newTags,
+                    projectes: newProjects,
+                    logo_url: newLogoUrl
+                });
+                
                 defaultHashtags = newTags;
+                defaultProjects = newProjects;
+                defaultLogoUrl = newLogoUrl;
+                
                 await supabaseClient.from('posts').update({ hashtags: newTags }).eq('estat', 'Pendent');
-                showToast("Dades desades i publicacions actualitzades!");
+                showToast("Configuració desada!");
                 showView('manager');
             } catch (e) {
                 showToast("Error al desar", "error");
             } finally {
                 btnSave.disabled = false;
-                btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar i actualitzar pendents';
+                btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar configuració';
             }
         }
 
@@ -487,6 +541,11 @@
                     btnT.className = 'flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer';
                     document.getElementById('view-settings').classList.remove('hidden');
                     document.getElementById('configHashtags').value = defaultHashtags;
+                    document.getElementById('configProjects').value = defaultProjects;
+                    if (defaultLogoUrl) {
+                        document.getElementById('currentWatermarkContainer').classList.remove('hidden');
+                        document.getElementById('currentWatermarkImg').src = defaultLogoUrl;
+                    }
                 }
             } else if (userRole === 'teacher') {
                 document.getElementById('view-teacher').classList.remove('hidden');
@@ -815,6 +874,79 @@
             } catch (error) { showToast("Error al desar", "error"); }
         }
 
+        // --- NOU: Funcions per a la Marca d'aigua ---
+        async function applyWatermark(imageUrl, projectText) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    await document.fonts.load("500 24px Oswald");
+                    
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = async () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        const hasText = projectText && projectText !== 'NOMES_LOGO' && projectText !== '';
+                        const theText = hasText ? projectText : '';
+
+                        if (window.defaultLogoUrl) {
+                            try {
+                                const wm = new Image();
+                                wm.crossOrigin = 'anonymous';
+                                wm.src = window.defaultLogoUrl;
+                                await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
+                                
+                                const wmWidth = canvas.width * 0.15; // Mida del logo referenciada proporcionalment
+                                const wmHeight = (wm.height / wm.width) * wmWidth;
+                                const padding = canvas.width * 0.04;
+                                const wmX = canvas.width - wmWidth - padding;
+                                const wmY = canvas.height - wmHeight - padding;
+                                
+                                ctx.drawImage(wm, wmX, wmY, wmWidth, wmHeight);
+
+                                if (hasText) {
+                                    const fontSize = Math.max(30, canvas.width * 0.045);
+                                    ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`;
+                                    ctx.fillStyle = 'white';
+                                    ctx.textAlign = 'right';
+                                    ctx.textBaseline = 'middle';
+                                    // Ombra per visibilitat
+                                    ctx.shadowColor = "rgba(0,0,0,0.7)";
+                                    ctx.shadowBlur = 8;
+                                    ctx.shadowOffsetX = 2;
+                                    ctx.shadowOffsetY = 2;
+                                    ctx.fillText(theText, wmX - padding, wmY + (wmHeight/2));
+                                }
+                            } catch(e) { console.error("Error al carregar el logo per a la marca d'aigua", e); }
+                        } else if (hasText) {
+                            // Si no hi ha logo carregat però sí que es vol el text del projecte
+                            const fontSize = Math.max(30, canvas.width * 0.045);
+                            ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`;
+                            ctx.fillStyle = 'white';
+                            ctx.textAlign = 'right';
+                            ctx.textBaseline = 'bottom';
+                            ctx.shadowColor = "rgba(0,0,0,0.7)";
+                            ctx.shadowBlur = 8;
+                            ctx.shadowOffsetX = 2;
+                            ctx.shadowOffsetY = 2;
+                            ctx.fillText(theText, canvas.width - (canvas.width * 0.04), canvas.height - (canvas.width * 0.04));
+                        }
+
+                        canvas.toBlob(blob => {
+                            resolve(blob);
+                        }, 'image/jpeg', 0.95);
+                    };
+                    img.onerror = () => reject("Error al carregar la foto original");
+                    img.src = imageUrl;
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
         function openPhotoModal(id) {
             window.currentPostId = id;
             const p = window.currentPosts.find(x => x.id == id);
@@ -824,14 +956,32 @@
             const container = document.getElementById('photoModalContent');
             let html = '';
 
+            let projectOptions = `<option value="">Sense marca d'aigua</option>`;
+            if (window.defaultLogoUrl) {
+                projectOptions += `<option value="NOMES_LOGO">Només el logo</option>`;
+            }
+            const projs = window.defaultProjects ? window.defaultProjects.split(',').map(s=>s.trim()).filter(s=>s) : [];
+            projs.forEach(proj => {
+                projectOptions += `<option value="${proj}">Logo + ${proj}</option>`;
+            });
+
+            html += `
+            <div class="mb-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <label class="block text-sm font-bold text-edo-darkblue mb-2"><i class="fa-solid fa-stamp text-edo-lightblue"></i> Marca d'aigua (1a foto):</label>
+                <select id="watermarkSelect" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-edo-lightblue font-semibold text-edo-gray">
+                    ${projectOptions}
+                </select>
+                <p class="text-[11px] text-slate-400 mt-2">S'aplicarà automàticament a la primera imatge en descarregar.</p>
+            </div>
+            `;
+
             if (urls.length > 1) {
                 html += `
                 <div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
-                    <h4 class="font-bold text-edo-darkblue mb-3 text-sm">Opció ràpida (Directe a la galeria)</h4>
-                    <button id="btnDownloadAll" onclick="downloadAllMedia()" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
+                    <button id="btnDownloadAll" onclick="downloadAllMedia(${id})" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]">
                         <i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})
                     </button>
-                    <p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Només has de seleccionar <strong>"Desar ${urls.length} imatges"</strong> al menú del teu mòbil per enviar-les directes al carret.</p>
+                    <p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Només has de seleccionar <strong>"Desar imatges"</strong> al menú del mòbil per enviar-les al carret.</p>
                 </div>
                 <hr class="border-slate-200 mb-6">
                 `;
@@ -850,7 +1000,7 @@
                 html += `
                 <div class="border border-slate-200 rounded-xl shadow-sm flex flex-col bg-white">
                     ${mediaTag}
-                    <button onclick="downloadSingleMedia('${url}')" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
+                    <button onclick="downloadSingleMedia('${url}', ${id}, ${index})" id="btnDlSingle_${index}" class="py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold rounded-b-xl border-t border-slate-100 flex items-center justify-center gap-2 transition">
                         <i class="fa-solid fa-download"></i> Baixar arxiu ${index + 1}
                     </button>
                 </div>
@@ -866,62 +1016,99 @@
             document.getElementById('photoModal').classList.add('hidden');
         }
 
-        async function downloadAllMedia() {
-            const id = window.currentPostId;
+        async function downloadAllMedia(id) {
             const p = window.currentPosts.find(x => x.id == id);
             const urls = p.imatges;
             
             const btn = document.getElementById('btnDownloadAll');
             const ogHtml = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant...`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant (això pot trigar)...`;
             btn.disabled = true;
 
             const text = getPostText(id);
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast("Text auto-copiat! Preparant fotos...");
-            } catch(e) {}
+            try { await navigator.clipboard.writeText(text); } catch(e) {}
+
+            const wmSelect = document.getElementById('watermarkSelect');
+            const projectText = wmSelect ? wmSelect.value : "";
 
             try {
                 const fetchPromises = urls.map(async (url, index) => {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
+                    const cleanUrl = url.split('?')[0].toLowerCase();
+                    const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
+                    
+                    let blob;
+                    // Només s'aplica la marca d'aigua a la primera imatge (index 0) si no és un vídeo
+                    if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && window.defaultLogoUrl))) {
+                        blob = await applyWatermark(url, projectText);
+                    } else {
+                        const response = await fetch(url);
+                        blob = await response.blob();
+                    }
+                    
                     const extension = blob.type.split('/')[1] || 'jpeg';
                     return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
                 });
+                
                 const filesArray = await Promise.all(fetchPromises);
 
                 if (navigator.canShare && navigator.canShare({ files: filesArray })) {
                     await navigator.share({ files: filesArray });
                     btn.innerHTML = `<i class="fa-solid fa-check"></i> Fet!`;
                 } else {
-                    showToast("El teu navegador no suporta guardar-les totes juntes. Utilitza els botons d'una en una.", "error");
+                    showToast("El navegador no suporta compartir múltiples arxius.", "error");
                     btn.innerHTML = ogHtml;
                 }
             } catch (error) {
                 btn.innerHTML = ogHtml;
-                if (error.name !== 'AbortError') {
-                    showToast("Acció cancel·lada", "error");
-                }
+                if (error.name !== 'AbortError') showToast("Acció cancel·lada", "error");
             } finally {
                 btn.disabled = false;
                 setTimeout(() => { if(btn.innerHTML.includes('Fet!')) btn.innerHTML = ogHtml; }, 2000);
             }
         }
 
-        function downloadSingleMedia(url) {
-            if(window.currentPostId) {
-                const text = getPostText(window.currentPostId);
+        async function downloadSingleMedia(url, id, index) {
+            const btn = document.getElementById(`btnDlSingle_${index}`);
+            const ogHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processant...`;
+            btn.disabled = true;
+
+            if(id) {
+                const text = getPostText(id);
                 navigator.clipboard.writeText(text).catch(()=>{});
             }
-            const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast("Descàrrega iniciada (Text copiat!)");
+
+            const cleanUrl = url.split('?')[0].toLowerCase();
+            const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
+            const wmSelect = document.getElementById('watermarkSelect');
+            const projectText = wmSelect ? wmSelect.value : "";
+            
+            try {
+                if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && window.defaultLogoUrl))) {
+                    const finalBlob = await applyWatermark(url, projectText);
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(finalBlob);
+                    a.download = `eDoActiu_media_1.jpeg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showToast("Descàrrega (amb marca d'aigua) iniciada!");
+                } else {
+                    const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showToast("Descàrrega iniciada!");
+                }
+            } catch (error) {
+                showToast("Error en la descàrrega", "error");
+            } finally {
+                btn.innerHTML = ogHtml;
+                btn.disabled = false;
+            }
         }
 
         async function updateStatus(id, st) {
