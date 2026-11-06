@@ -548,7 +548,7 @@ let projectText = "";
 if (wmSelect) {
 if (wmSelect.value === 'CUSTOM') projectText = customInput ? customInput.value : "";
 else if (wmSelect.value.startsWith('PREDEF_')) projectText = wmSelect.value.replace('PREDEF_', '');
-else if (wmSelect.value === '') projectText = 'NOMES_LOGO';
+else if (wmSelect.value === 'NOMES_LOGO') projectText = 'NOMES_LOGO';
 }
 return { projectText, textColor: colorInput ? colorInput.value : '#ffffff' };
 }
@@ -566,16 +566,21 @@ if (defaultLogoUrl) {
 try {
 const wm = new Image(); wm.crossOrigin = 'anonymous'; wm.src = defaultLogoUrl;
 await new Promise((r, e) => { wm.onload = r; wm.onerror = e; });
-const wmWidth = canvas.width * 0.15, wmHeight = (wm.height / wm.width) * wmWidth, padding = canvas.width * 0.04, wmX = canvas.width - wmWidth - padding, wmY = canvas.height - wmHeight - padding;
+const targetHeight = canvas.height * 0.12; 
+const wmHeight = targetHeight;
+const wmWidth = (wm.width / wm.height) * wmHeight;
+const padding = canvas.width * 0.04;
+const wmX = canvas.width - wmWidth - padding;
+const wmY = canvas.height - wmHeight - padding;
 ctx.drawImage(wm, wmX, wmY, wmWidth, wmHeight);
 if (hasText) {
-const fontSize = Math.max(30, canvas.width * 0.045);
+const fontSize = wmHeight * 0.6; 
 ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`; ctx.fillStyle = textColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
 ctx.fillText(theText, wmX - padding, wmY + (wmHeight/2));
 }
 } catch(e) {}
 } else if (hasText) {
-const fontSize = Math.max(30, canvas.width * 0.045);
+const fontSize = Math.max(30, canvas.height * 0.08);
 ctx.font = `500 ${fontSize}px 'Oswald', sans-serif`; ctx.fillStyle = textColor; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = 8; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
 ctx.fillText(theText, canvas.width - (canvas.width * 0.04), canvas.height - (canvas.width * 0.04));
 }
@@ -589,9 +594,10 @@ function openPhotoModal(id) {
 window.currentPostId = id; const p = currentPosts.find(x => x.id == id);
 if(!p || !p.imatges) return;
 const urls = p.imatges, container = document.getElementById('photoModalContent');
-let projectOptions = `<option value="">Sense text (només logo si n'hi ha)</option>`;
+let projectOptions = `<option value="">Sense cap marca d'aigua</option>`;
+if (defaultLogoUrl) projectOptions += `<option value="NOMES_LOGO">Només el logo</option>`;
 const projs = defaultProjects ? defaultProjects.split(',').map(s=>s.trim()).filter(s=>s) : [];
-projs.forEach(proj => { projectOptions += `<option value="PREDEF_${proj}">${proj}</option>`; });
+projs.forEach(proj => { projectOptions += `<option value="PREDEF_${proj}">${defaultLogoUrl ? 'Logo + ' : ''}${proj}</option>`; });
 projectOptions += `<option value="CUSTOM">✏️ Text lliure personalitzat...</option>`;
 let html = `
 <div class="mb-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -633,7 +639,7 @@ try {
 const fetchPromises = urls.map(async (url, index) => {
 const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
 let blob;
-if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && defaultLogoUrl))) blob = await applyWatermark(url, projectText, textColor);
+if (index === 0 && !isVideo && projectText !== "") blob = await applyWatermark(url, projectText, textColor);
 else { const response = await fetch(url); blob = await response.blob(); }
 const extension = blob.type.split('/')[1] || 'jpeg';
 return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
@@ -650,9 +656,9 @@ if(id) navigator.clipboard.writeText(getPostText(id)).catch(()=>{});
 const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
 const { projectText, textColor } = getWatermarkParams();
 try {
-if (index === 0 && !isVideo && (projectText !== "" || (projectText === "NOMES_LOGO" && defaultLogoUrl))) {
+if (index === 0 && !isVideo && projectText !== "") {
 const finalBlob = await applyWatermark(url, projectText, textColor);
-const a = document.createElement('a'); a.href = URL.createObjectURL(finalBlob); a.download = `eDoActiu_media_1.jpeg`; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("Descàrrega (amb marca d'aigua) iniciada!");
+const a = document.createElement('a'); a.href = URL.createObjectURL(finalBlob); a.download = `eDoActiu_media_1.jpeg`; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("Descàrrega iniciada!");
 } else {
 const downloadUrl = url + (url.includes('?') ? '&' : '?') + 'download=';
 const a = document.createElement('a'); a.href = downloadUrl; a.target = '_blank'; document.body.appendChild(a); a.click(); document.body.removeChild(a); showToast("Descàrrega iniciada!");
@@ -662,14 +668,14 @@ const a = document.createElement('a'); a.href = downloadUrl; a.target = '_blank'
 async function updateStatus(id, st) { try { await supabaseClient.from('posts').update({ estat: st }).eq('id', id); loadPosts(); if(st === 'Pendent') showToast("Publicació restaurada a Pendent"); } catch (e) {} }
 async function archivePost(id) { if(confirm("Segur que vols arxivar aquesta publicació? Desapareixerà del tauler actiu.")) { try { await supabaseClient.from('posts').update({ estat: 'Arxivat' }).eq('id', id); loadPosts(); showToast("Publicació arxivada"); } catch (e) {} } }
 async function deletePost(id) {
-if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació i totes les seves fotos definitivament del servidor. N'estàs segur/a?")) {
+if(confirm("ATENCIÓ: Aquesta acció esborrarà la publicació i totes les fotos definitivament. N'estàs segur/a?")) {
 try {
 const p = currentPosts.find(x => x.id == id);
 if (p && p.imatges && p.imatges.length > 0) {
 const filenames = p.imatges.map(url => { const parts = url.split('/'); return parts[parts.length - 1].split('?')[0]; });
 await supabaseClient.storage.from('xarxes_photos').remove(filenames);
 }
-await supabaseClient.from('posts').delete().eq('id', id); loadPosts(); showToast("Publicació i arxius eliminats definitivament");
+await supabaseClient.from('posts').delete().eq('id', id); loadPosts(); showToast("Publicació eliminada definitivament");
 } catch (e) {}
 }
 }
