@@ -397,6 +397,14 @@ let isBlurring = false;
 let magicMode = 'crop'; 
 
 window.openMagicEditor = function(id, index, url) {
+    const cleanUrl = url.split('?')[0].toLowerCase();
+    
+    // Validació anti-vídeos
+    if (cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) { 
+        showToast("No es pot editar un arxiu de vídeo.", "error"); 
+        return; 
+    }
+
     magicPostId = id;
     magicImgIndex = index;
     magicOriginalUrl = url;
@@ -411,7 +419,6 @@ window.openMagicEditor = function(id, index, url) {
     imgEl.onload = () => {
         if(magicCropper) magicCropper.destroy();
         
-        // Iniciem Cropper sense esborrar el requadre perquè sigui evident
         magicCropper = new Cropper(imgEl, {
             viewMode: 1,
             dragMode: 'move',
@@ -420,7 +427,6 @@ window.openMagicEditor = function(id, index, url) {
             autoCropArea: 1
         });
         
-        // Preparem l'eina de difuminat en segon pla
         magicImgObj = new Image();
         magicImgObj.crossOrigin = 'anonymous';
         magicImgObj.src = url;
@@ -453,7 +459,10 @@ window.setMagicTab = function(mode) {
         bCont.classList.remove('hidden'); cCont.classList.add('hidden');
         bCtrl.classList.remove('hidden'); cCtrl.classList.add('hidden');
         
-        setTimeout(() => document.getElementById('blurHint').classList.add('opacity-0'), 3000);
+        setTimeout(() => {
+            const hint = document.getElementById('blurHint');
+            if(hint) hint.classList.add('opacity-0');
+        }, 3000);
     }
 };
 
@@ -461,7 +470,6 @@ window.setCropRatio = function(ratio) {
     if(magicCropper) {
         magicCropper.setAspectRatio(ratio);
         
-        // Forcem que el marc s'expandeixi a l'àrea màxima quan es prem un botó
         const containerData = magicCropper.getContainerData();
         magicCropper.setCropBoxData({
             left: 0,
@@ -536,7 +544,6 @@ window.saveMagicEdits = async function() {
         
         if(magicMode === 'crop' && magicCropper) {
             const cropData = magicCropper.getCropBoxData();
-            // Verifiquem que hi ha una àrea vàlida de retall dibuixada
             if (cropData.width > 0 && cropData.height > 0) {
                 const canvasData = magicCropper.getCroppedCanvas({
                     imageSmoothingEnabled: true,
@@ -711,12 +718,21 @@ window.openPhotoModal = function(id) {
     urls.forEach((url, index) => {
         const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
         const mediaTag = isVideo ? `<video src="${url}" controls class="w-full h-48 object-cover rounded-t-lg bg-black"></video>` : `<img src="${url}" class="w-full h-48 object-cover rounded-t-lg bg-slate-100">`;
+        
+        let actionsHtml = '';
+        if (isVideo) {
+            actionsHtml = `<button onclick="downloadSingleMedia('${url}', ${id}, ${index})" id="btnDlSingle_${index}" class="w-full py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold transition rounded-b-xl"><i class="fa-solid fa-download"></i> Baixar vídeo</button>`;
+        } else {
+            actionsHtml = `
+            <button onclick="openMagicEditor(${id}, ${index}, '${url}')" class="flex-1 py-3.5 hover:bg-slate-50 text-edo-gray font-bold border-r border-slate-100 transition rounded-bl-xl"><i class="fa-solid fa-wand-magic-sparkles text-edo-lightblue"></i> Editar</button>
+            <button onclick="downloadSingleMedia('${url}', ${id}, ${index})" id="btnDlSingle_${index}" class="flex-1 py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold transition rounded-br-xl"><i class="fa-solid fa-download"></i> Baixar</button>`;
+        }
+
         html += `
 <div class="border border-slate-200 rounded-xl shadow-sm flex flex-col bg-white">
 ${mediaTag}
 <div class="flex border-t border-slate-100">
-    <button onclick="openMagicEditor(${id}, ${index}, '${url}')" class="flex-1 py-3.5 hover:bg-slate-50 text-edo-gray font-bold border-r border-slate-100 transition"><i class="fa-solid fa-wand-magic-sparkles text-edo-lightblue"></i> Editar</button>
-    <button onclick="downloadSingleMedia('${url}', ${id}, ${index})" id="btnDlSingle_${index}" class="flex-1 py-3.5 hover:bg-slate-50 text-edo-darkblue font-bold transition"><i class="fa-solid fa-download"></i> Baixar</button>
+    ${actionsHtml}
 </div>
 </div>`;
     });
@@ -752,10 +768,20 @@ async function applyWatermarkDynamic(imageUrl) {
                 
                 if (text && text !== 'NOMES_LOGO') {
                     const fSize = canvas.width * (textSize / 100);
-                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = "rgba(0,0,0,0.7)"; ctx.shadowBlur = Math.max(4, fSize*0.1); ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
-                    const tFinalX = canvas.width * (textX / 100); const tFinalY = canvas.height * (textY / 100);
+                    ctx.font = `500 ${fSize}px 'Oswald', sans-serif`; 
+                    ctx.fillStyle = color; 
+                    ctx.textAlign = 'center'; 
+                    ctx.textBaseline = 'middle'; 
+                    ctx.shadowColor = "rgba(0,0,0,0.7)"; 
+                    ctx.shadowBlur = Math.max(4, fSize*0.1); 
+                    ctx.shadowOffsetX = 2; 
+                    ctx.shadowOffsetY = 2;
+                    
+                    const tFinalX = canvas.width * (textX / 100);
+                    const tFinalY = canvas.height * (textY / 100);
                     ctx.fillText(text, tFinalX, tFinalY);
                 }
+                
                 canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.95);
             };
             img.onerror = () => reject(); img.src = imageUrl;
