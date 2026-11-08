@@ -385,9 +385,6 @@ async function saveEdit() {
     try { await supabaseClient.from('posts').update({ titol: titol, descripcio: desc, hashtags: tags }).eq('id', id); closeEditModal(); loadPosts(); showToast("Modificacions desades"); } catch (error) { showToast("Error al desar", "error"); }
 }
 
-// ----------------------------------------------------
-// EDITOR MÀGIC: RETALLAR + CENSURAR CARES
-// ----------------------------------------------------
 let magicCropper = null;
 let magicImgObj = null;
 let magicPostId = null;
@@ -471,7 +468,6 @@ function initBlurTool() {
     magicCanvas = document.getElementById('blurCanvas');
     magicCtx = magicCanvas.getContext('2d');
     
-    // Scale down if image is huge for performance
     const MAX_DIM = 1200;
     let w = magicImgObj.naturalWidth, h = magicImgObj.naturalHeight;
     if(w > MAX_DIM || h > MAX_DIM) {
@@ -482,7 +478,6 @@ function initBlurTool() {
     magicCanvas.width = w; magicCanvas.height = h;
     magicCtx.drawImage(magicImgObj, 0, 0, w, h);
     
-    // Create heavily blurred off-screen canvas
     magicBlurCanvas = document.createElement('canvas');
     magicBlurCanvas.width = w; magicBlurCanvas.height = h;
     const bCtx = magicBlurCanvas.getContext('2d');
@@ -546,14 +541,12 @@ window.saveMagicEdits = async function() {
         const { data: publicUrlData } = supabaseClient.storage.from('xarxes_photos').getPublicUrl(fileName);
         const newUrl = publicUrlData.publicUrl;
         
-        // Actualitzar BBDD
         const p = currentPosts.find(x => x.id == magicPostId);
         let updatedUrls = [...p.imatges];
         updatedUrls[magicImgIndex] = newUrl;
         
         await supabaseClient.from('posts').update({ imatges: updatedUrls }).eq('id', magicPostId);
         
-        // Esborrar arxiu vell
         const oldFileName = magicOriginalUrl.split('/').pop().split('?')[0];
         supabaseClient.storage.from('xarxes_photos').remove([oldFileName]).catch(e=>console.error(e));
         
@@ -568,10 +561,6 @@ window.saveMagicEdits = async function() {
         btn.innerHTML = ogHtml; btn.disabled = false;
     }
 };
-
-// ----------------------------------------------------
-// EDITOR MARCA D'AIGUA
-// ----------------------------------------------------
 
 window.handleWmEditorSelect = function() {
     const sel = document.getElementById('wmEditorSelect');
