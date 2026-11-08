@@ -410,16 +410,17 @@ window.openMagicEditor = function(id, index, url) {
     
     imgEl.onload = () => {
         if(magicCropper) magicCropper.destroy();
+        
+        // Iniciem Cropper sense esborrar el requadre perquè sigui evident
         magicCropper = new Cropper(imgEl, {
             viewMode: 1,
             dragMode: 'move',
-            background: false,
+            background: true,
             responsive: true,
-            autoCropArea: 1,
-            ready: function() { this.cropper.clear(); }
+            autoCropArea: 1
         });
         
-        // Prepare blur canvases quietly in the background
+        // Preparem l'eina de difuminat en segon pla
         magicImgObj = new Image();
         magicImgObj.crossOrigin = 'anonymous';
         magicImgObj.src = url;
@@ -452,7 +453,6 @@ window.setMagicTab = function(mode) {
         bCont.classList.remove('hidden'); cCont.classList.add('hidden');
         bCtrl.classList.remove('hidden'); cCtrl.classList.add('hidden');
         
-        // Hide hint after 3 seconds
         setTimeout(() => document.getElementById('blurHint').classList.add('opacity-0'), 3000);
     }
 };
@@ -460,7 +460,15 @@ window.setMagicTab = function(mode) {
 window.setCropRatio = function(ratio) {
     if(magicCropper) {
         magicCropper.setAspectRatio(ratio);
-        if(isNaN(ratio)) magicCropper.clear(); // Mode lliure
+        
+        // Forcem que el marc s'expandeixi a l'àrea màxima quan es prem un botó
+        const containerData = magicCropper.getContainerData();
+        magicCropper.setCropBoxData({
+            left: 0,
+            top: 0,
+            width: containerData.width,
+            height: containerData.height
+        });
     }
 };
 
@@ -525,12 +533,25 @@ window.saveMagicEdits = async function() {
     
     try {
         let finalBlob = null;
-        if(magicMode === 'crop' && magicCropper && Object.keys(magicCropper.getCropBoxData()).length > 0) {
-            finalBlob = await new Promise(res => magicCropper.getCroppedCanvas({imageSmoothingQuality: 'high'}).toBlob(res, 'image/jpeg', 0.9));
+        
+        if(magicMode === 'crop' && magicCropper) {
+            const cropData = magicCropper.getCropBoxData();
+            // Verifiquem que hi ha una àrea vàlida de retall dibuixada
+            if (cropData.width > 0 && cropData.height > 0) {
+                const canvasData = magicCropper.getCroppedCanvas({
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                });
+                finalBlob = await new Promise(res => canvasData.toBlob(res, 'image/jpeg', 0.92));
+            } else {
+                showToast("No s'ha detectat cap àrea per retallar", "error");
+                btn.innerHTML = ogHtml; btn.disabled = false;
+                return;
+            }
         } else if (magicMode === 'blur') {
-            finalBlob = await new Promise(res => magicCanvas.toBlob(res, 'image/jpeg', 0.9));
+            finalBlob = await new Promise(res => magicCanvas.toBlob(res, 'image/jpeg', 0.92));
         } else {
-            showToast("No s'ha fet cap canvi evident.");
+            showToast("Error inesperat de l'editor", "error");
             closeMagicEditor(); return;
         }
 
