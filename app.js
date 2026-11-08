@@ -414,6 +414,7 @@ window.updateWmEditorPreview = function() {
     if(defaultLogoUrl && textStr !== 'NOMES_TEXT') {
         logoEl.src = defaultLogoUrl; 
         logoEl.style.width = (containerW * (logoSzPct/100)) + 'px';
+        logoEl.style.height = 'auto'; 
         dragLogoEl.classList.remove('hidden');
     } else dragLogoEl.classList.add('hidden');
     
@@ -511,13 +512,15 @@ window.openPhotoModal = function(id) {
 </div>
 <button onclick="openWmEditor()" class="w-full py-2 bg-edo-lightblue/10 text-edo-darkblue font-bold rounded-lg border border-edo-lightblue/30 hover:bg-edo-lightblue/20 transition"><i class="fa-solid fa-palette"></i> Crear i ajustar...</button>
 </div>`;
-    if (urls.length > 1) {
-        html += `
-<div class="mb-6 p-4 bg-edo-lightblue/10 rounded-xl border border-edo-lightblue/30">
-<button id="btnDownloadAll" onclick="downloadAllMedia(${id})" class="w-full py-3.5 bg-edo-darkblue text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:bg-[#1a4369]"><i class="fa-solid fa-layer-group"></i> Guardar totes de cop (${urls.length})</button>
-<p class="text-xs text-edo-gray mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Selecciona <strong>"Desar imatges"</strong> al menú per enviar-les al carret.</p>
+
+    html += `
+<div class="mb-6 p-4 bg-fuchsia-50/50 rounded-xl border border-fuchsia-100">
+<button id="btnPublishIg" onclick="publishToInstagram(${id})" class="w-full py-3.5 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition hover:opacity-90">
+<i class="fa-brands fa-instagram text-xl"></i> Publicar-ho (${urls.length})
+</button>
+<p class="text-xs text-slate-500 mt-3 leading-relaxed"><strong>El text s'auto-copiarà!</strong> Obre el menú natiu per enviar-ho a Instagram. Si falla, et descarregarà l'arxiu.</p>
 </div><hr class="border-slate-200 mb-6">`;
-    }
+
     html += `<h4 class="font-bold text-edo-darkblue mb-4 text-sm">Descarregar d'una en una:</h4><div class="space-y-5">`;
     urls.forEach((url, index) => {
         const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
@@ -583,10 +586,13 @@ async function applyWatermarkDynamic(imageUrl) {
     });
 }
 
-window.downloadAllMedia = async function(id) {
-    const p = currentPosts.find(x => x.id == id), urls = p.imatges, btn = document.getElementById('btnDownloadAll'), ogHtml = btn.innerHTML;
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Preparant (això pot trigar)...`; btn.disabled = true;
+window.publishToInstagram = async function(id) {
+    const p = currentPosts.find(x => x.id == id), urls = p.imatges, btn = document.getElementById('btnPublishIg'), ogHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xl"></i> Preparant...`; btn.disabled = true;
+    
     try { await navigator.clipboard.writeText(getPostText(id)); } catch(e) {}
+    showToast("Text copiat! Preparant arxius...");
+
     try {
         const fetchPromises = urls.map(async (url, index) => {
             const cleanUrl = url.split('?')[0].toLowerCase(), isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm');
@@ -596,10 +602,37 @@ window.downloadAllMedia = async function(id) {
             const extension = blob.type.split('/')[1] || 'jpeg';
             return new File([blob], `eDoActiu_media_${index + 1}.${extension}`, { type: blob.type });
         });
+        
         const filesArray = await Promise.all(fetchPromises);
-        if (navigator.canShare && navigator.canShare({ files: filesArray })) { await navigator.share({ files: filesArray }); btn.innerHTML = `<i class="fa-solid fa-check"></i> Fet!`; }
-        else { showToast("El navegador no suporta compartir múltiples arxius.", "error"); btn.innerHTML = ogHtml; }
-    } catch (error) { btn.innerHTML = ogHtml; if (error.name !== 'AbortError') showToast("Acció cancel·lada", "error"); } finally { btn.disabled = false; setTimeout(() => { if(btn.innerHTML.includes('Fet!')) btn.innerHTML = ogHtml; }, 2000); }
+        
+        if (navigator.canShare && navigator.canShare({ files: filesArray })) { 
+            await navigator.share({ files: filesArray, title: 'Publicació eDoActiu' }); 
+            btn.innerHTML = `<i class="fa-solid fa-check text-xl"></i> Fet!`; 
+        } else {
+            if (filesArray.length === 1) {
+                const file = filesArray[0];
+                const downloadUrl = URL.createObjectURL(file);
+                const a = document.createElement('a'); 
+                a.href = downloadUrl; 
+                a.download = file.name; 
+                document.body.appendChild(a); 
+                a.click(); 
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                showToast("S'ha descarregat l'arxiu directament.");
+                btn.innerHTML = `<i class="fa-solid fa-check text-xl"></i> Descarregat!`;
+            } else {
+                showToast("El navegador no suporta compartir múltiples arxius. Fes servir els botons de sota.", "error");
+                btn.innerHTML = ogHtml;
+            }
+        }
+    } catch (error) { 
+        btn.innerHTML = ogHtml; 
+        if (error.name !== 'AbortError') showToast("Acció cancel·lada", "error"); 
+    } finally { 
+        btn.disabled = false; 
+        setTimeout(() => { if(btn.innerHTML.includes('Fet!') || btn.innerHTML.includes('Descarregat!')) btn.innerHTML = ogHtml; }, 2000); 
+    }
 };
 
 window.downloadSingleMedia = async function(url, id, index) {
