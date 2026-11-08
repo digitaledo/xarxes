@@ -13,7 +13,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-<!-- Llibreria Cropper.js per retallar fotos -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -179,7 +178,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 
 <div id="toastContainer" class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- Modal de Text / Info -->
 <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
 <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
@@ -208,7 +206,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 </div>
 </div>
 
-<!-- Modal Galeria de Fotos -->
 <div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
 <div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
@@ -222,7 +219,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 </div>
 </div>
 
-<!-- Modal Editor Màgic (Retall + Censura) -->
 <div id="magicEditorModal" class="fixed inset-0 bg-slate-950 hidden z-[400] flex flex-col">
     <div class="flex justify-between items-center p-3 bg-slate-900 text-white shadow-md z-20">
         <h3 class="font-bold text-sm">✂️ Editor d'imatge</h3>
@@ -236,12 +232,10 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
 
     <div class="flex-grow flex items-center justify-center bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfALEAkPwwQG1M+BgYGBgYGFgYGBgYGFgYGBgYGFgYGBgYGFgYGADyKxEB493B2gAAAABJRU5ErkJggg==')] overflow-hidden p-2 relative touch-none">
         
-        <!-- Contenidor Retall -->
         <div id="cropContainer" class="w-full h-full relative">
             <img id="cropImage" class="max-w-full max-h-full block">
         </div>
         
-        <!-- Contenidor Blur (Pinzell) -->
         <div id="blurContainer" class="hidden w-full h-full relative flex items-center justify-center">
             <canvas id="blurCanvas" class="max-w-full max-h-full shadow-2xl touch-none rounded cursor-crosshair"></canvas>
             <p id="blurHint" class="absolute top-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-bold pointer-events-none transition-opacity">Passa el dit per difuminar cares o noms</p>
@@ -249,14 +243,12 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
     </div>
     
     <div class="bg-slate-900 p-4 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-20 shrink-0">
-        <!-- Controls de Retall -->
         <div id="cropControls" class="grid grid-cols-4 gap-2 mb-3">
             <button onclick="setCropRatio(1)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">1:1</button>
             <button onclick="setCropRatio(4/5)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">4:5</button>
             <button onclick="setCropRatio(9/16)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">9:16</button>
             <button onclick="setCropRatio(NaN)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">Lliure</button>
         </div>
-        <!-- Controls Blur -->
         <div id="blurControls" class="hidden flex justify-between items-center mb-3">
             <button onclick="resetBlur()" class="py-2 px-4 bg-rose-900/50 text-rose-300 rounded font-bold text-xs"><i class="fa-solid fa-rotate-left"></i> Netejar</button>
             <div class="flex items-center gap-2">
@@ -272,7 +264,6 @@ fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 
     </div>
 </div>
 
-<!-- Modal compacte de l'Editor de Marca d'Aigua -->
 <div id="wmEditorModal" class="fixed inset-0 bg-slate-900/95 hidden z-[300] flex flex-col">
 <div class="flex justify-between items-center p-3 bg-edo-darkblue text-white shadow-md z-20">
 <h3 class="font-bold text-sm">🎨 Marca d'aigua</h3>
