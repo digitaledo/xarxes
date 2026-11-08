@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="eDoActiu">
+<meta name="theme-color" content="#2c6496">
+<title>eDoActiu - Gestor/a de xarxes escolars</title>
+<link rel="manifest" id="dynamic-manifest">
+<link rel="apple-touch-icon" href="logo.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Inter:wght@400;500;600;700&family=Oswald:wght@500&display=swap" rel="stylesheet">
+<!-- Llibreria Cropper.js per retallar fotos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+tailwind.config = {
+theme: {
+extend: {
+colors: { 'edo-darkblue': '#2c6496', 'edo-lightblue': '#6bb2d3', 'edo-orange': '#df9516', 'edo-gray': '#56575b' },
+fontFamily: { 'sans': ['Inter', 'sans-serif'], 'school': ['Fredoka', 'cursive', 'sans-serif'], 'oswald': ['Oswald', 'sans-serif'] }
+}
+}
+}
+</script>
+</head>
+<body class="bg-slate-50 text-edo-gray min-h-screen flex flex-col relative overflow-x-hidden">
+<header class="bg-edo-darkblue text-white shadow-md sticky top-0 z-50">
+<div class="max-w-4xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+<div class="flex items-center gap-3">
+<div class="bg-white text-edo-darkblue p-2 rounded-xl shadow-inner font-school text-xl font-bold flex items-center justify-center w-10 h-10">
+<i class="fa-solid fa-hashtag"></i>
+</div>
+<div>
+<h1 class="text-xl font-bold font-school">eDoActiu Xarxes</h1>
+<p class="text-edo-lightblue text-xs" id="userStatusText">Intranet de publicacions</p>
+</div>
+</div>
+<div id="navButtons" class="hidden bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto">
+<button id="btnRoleTeacher" onclick="showView('teacher')" class="flex-1 sm:flex-none px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">👨‍🏫 Mestre/a</button>
+<button id="btnRoleManager" onclick="showView('manager')" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-edo-lightblue hover:text-white transition cursor-pointer">📱 Gestor/a</button>
+<button onclick="handleLogout()" class="flex-1 sm:flex-none px-3 py-2 rounded-md text-rose-300 hover:text-rose-100 transition cursor-pointer" title="Tancar sessió"><i class="fa-solid fa-power-off"></i></button>
+</div>
+<div id="navLogoutOnly" class="hidden bg-[#1a4369] rounded-lg p-1 text-sm font-medium w-full sm:w-auto flex justify-end">
+<button onclick="handleLogout()" class="px-4 py-2 rounded-md text-rose-300 hover:text-rose-100 transition cursor-pointer flex items-center gap-2"><i class="fa-solid fa-power-off"></i> Sortir</button>
+</div>
+</div>
+</header>
+<main class="max-w-4xl mx-auto px-4 py-6 w-full flex-grow relative">
+<section id="view-login" class="flex justify-center items-center py-10">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-sm w-full text-center">
+<div class="w-16 h-16 bg-edo-lightblue/20 text-edo-darkblue rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+<i class="fa-solid fa-lock"></i>
+</div>
+<h2 class="font-school text-xl font-bold text-edo-darkblue mb-2">Accés eDoActiu</h2>
+<form onsubmit="handleLogin(event)" class="space-y-4 mt-6">
+<input type="password" id="appPassword" required placeholder="Introdueix la contrasenya" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+<button type="submit" id="btnLogin" class="w-full py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow transition">Entrar</button>
+</form>
+</div>
+</section>
+<section id="view-teacher" class="hidden space-y-4">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<h2 class="font-school text-xl font-bold text-edo-darkblue mb-1">Nova publicació</h2>
+<p class="text-sm text-slate-500 mb-5">Envia fotos o vídeos curts (màx 30s).</p>
+<form id="postForm" onsubmit="submitPost(event)" class="space-y-4">
+<div>
+<label class="block text-sm font-semibold text-edo-gray mb-1">Títol de l'activitat *</label>
+<input type="text" id="postTitle" oninput="saveDraft()" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+</div>
+<div>
+<label class="block text-sm font-semibold text-edo-gray mb-1">Grup *</label>
+<select id="postGroup" onchange="saveDraft()" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></select>
+</div>
+<div>
+<label class="block text-sm font-semibold text-edo-gray mb-1">Text suggerit *</label>
+<textarea id="postDescription" oninput="saveDraft()" required rows="4" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+</div>
+<div>
+<label class="block text-sm font-semibold text-edo-gray mb-1">Pujar fotos o vídeos (màxim 5)</label>
+<div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer relative">
+<input type="file" id="postPhotos" accept="image/*,video/mp4,video/quicktime,video/webm" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewMedia()">
+<i class="fa-solid fa-cloud-arrow-up text-3xl text-edo-lightblue mb-2"></i>
+<p class="text-sm font-medium text-edo-gray">Toca per obrir la càmera o galeria</p>
+</div>
+<div id="mediaPreviewContainer" class="flex gap-2 mt-3 overflow-x-auto pb-2 hidden"></div>
+<div id="uploadProgressContainer" class="hidden mt-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+<div class="flex justify-between text-xs font-bold text-edo-darkblue mb-2">
+<span id="uploadStatusText">Processant...</span>
+<span id="uploadPercentage">0%</span>
+</div>
+<div class="w-full bg-slate-200 rounded-full h-2.5">
+<div id="uploadProgressBar" class="bg-edo-lightblue h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+</div>
+</div>
+</div>
+<button type="submit" id="btnSubmitPost" class="w-full py-3.5 bg-edo-orange hover:bg-[#c48212] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+<i class="fa-solid fa-paper-plane"></i> Enviar als gestors/es
+</button>
+</form>
+</div>
+</section>
+<section id="view-manager" class="hidden space-y-4">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+<div class="flex gap-2 w-full">
+<div class="flex bg-slate-100 rounded-lg p-1 text-sm font-medium flex-grow">
+<button id="btnTabActive" onclick="toggleArchiveView(false)" class="flex-1 px-4 py-2 rounded-md bg-white text-edo-darkblue shadow transition font-semibold">Actives</button>
+<button id="btnTabArchived" onclick="toggleArchiveView(true)" class="flex-1 px-4 py-2 rounded-md text-edo-gray hover:text-edo-darkblue transition cursor-pointer">Arxivades</button>
+</div>
+<button onclick="showView('settings')" class="bg-slate-100 text-edo-gray hover:text-edo-darkblue px-4 py-2 rounded-lg shadow-sm transition" title="Configuració"><i class="fa-solid fa-gear text-lg"></i></button>
+</div>
+<div class="flex justify-between items-center gap-2 w-full flex-wrap sm:flex-nowrap">
+<div class="flex items-center gap-2 flex-grow w-full sm:w-auto">
+<select id="filterMonth" onchange="resetPaginationAndLoad()" class="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-edo-lightblue focus:outline-none">
+<option value="">Tot l'any</option>
+<option value="01">Gener</option>
+<option value="02">Febrer</option>
+<option value="03">Març</option>
+<option value="04">Abril</option>
+<option value="05">Maig</option>
+<option value="06">Juny</option>
+<option value="07">Juliol</option>
+<option value="08">Agost</option>
+<option value="09">Setembre</option>
+<option value="10">Octubre</option>
+<option value="11">Novembre</option>
+<option value="12">Desembre</option>
+</select>
+<select id="filterYear" onchange="resetPaginationAndLoad()" class="w-full sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm appearance-none focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></select>
+</div>
+<button onclick="resetPaginationAndLoad()" class="text-edo-darkblue bg-edo-lightblue/20 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0"><i class="fa-solid fa-rotate-right"></i></button>
+</div>
+<div class="flex justify-between items-center text-sm font-semibold text-edo-darkblue border-t border-slate-100 pt-3">
+<button onclick="prevPage()" id="btnPrev" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition invisible"><i class="fa-solid fa-chevron-left"></i> Ant</button>
+<span id="pageIndicator" class="px-2">Pàg 1</span>
+<button onclick="nextPage()" id="btnNext" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition invisible">Seg <i class="fa-solid fa-chevron-right"></i></button>
+</div>
+</div>
+<div id="loadingIndicator" class="text-center py-10 hidden">
+<i class="fa-solid fa-circle-notch fa-spin text-3xl text-edo-lightblue"></i>
+</div>
+<div id="postsContainer" class="grid grid-cols-1 gap-4"></div>
+</section>
+<section id="view-settings" class="hidden space-y-4">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-school text-xl font-bold text-edo-darkblue">Configuració de gestió</h2>
+<button onclick="showView('manager')" class="text-edo-gray hover:text-edo-darkblue text-sm font-bold"><i class="fa-solid fa-arrow-left"></i> Tornar</button>
+</div>
+<div class="space-y-5">
+<div>
+<label class="block text-sm font-semibold text-edo-gray mb-2">Hashtags per defecte</label>
+<textarea id="configHashtags" rows="2" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+</div>
+<hr class="border-slate-100">
+<div>
+<h3 class="font-bold text-edo-darkblue mb-3 text-sm"><i class="fa-solid fa-stamp"></i> Marca d'aigua (projectes interns)</h3>
+<label class="block text-xs font-semibold text-edo-gray mb-1">Noms dels projectes (separats per comes)</label>
+<textarea id="configProjects" rows="2" placeholder="CETE+, Escola verda, STEAM" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-edo-lightblue focus:outline-none"></textarea>
+<label class="block text-xs font-semibold text-edo-gray mt-4 mb-1">Pujar nou logo (PNG transparent)</label>
+<input type="file" id="configWatermark" accept="image/png" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+<div id="currentWatermarkContainer" class="mt-3 hidden p-3 bg-slate-50 rounded-xl border border-slate-200 inline-block">
+<p class="text-xs text-slate-400 font-bold mb-2">Logo actual en ús:</p>
+<img id="currentWatermarkImg" src="" class="h-12 object-contain">
+</div>
+</div>
+</div>
+<button onclick="saveSettings()" id="btnSaveSettings" class="w-full mt-6 py-3 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+<i class="fa-solid fa-floppy-disk"></i> Guardar configuració
+</button>
+<p class="text-[10px] text-slate-400 text-center mt-3">En guardar, els hashtags nous s'aplicaran a totes les publicacions pendents.</p>
+</div>
+</section>
+</main>
+
+<div id="toastContainer" class="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- Modal de Text / Info -->
+<div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
+<div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
+<h3 class="font-bold">Editar publicació</h3>
+<button onclick="closeEditModal()" class="text-white text-xl">&times;</button>
+</div>
+<div class="p-4 space-y-3 overflow-y-auto flex-grow">
+<input type="hidden" id="editId">
+<div>
+<label class="block text-xs font-bold text-edo-gray mb-1">Títol</label>
+<input type="text" id="editTitle" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+</div>
+<div>
+<label class="block text-xs font-bold text-edo-gray mb-1">Descripció</label>
+<textarea id="editDesc" rows="4" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></textarea>
+</div>
+<div>
+<label class="block text-xs font-bold text-edo-gray mb-1">Hashtags</label>
+<textarea id="editHashtags" rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono"></textarea>
+</div>
+</div>
+<div class="p-4 border-t border-slate-100 flex justify-end gap-2">
+<button onclick="closeEditModal()" class="px-4 py-2 bg-slate-100 text-edo-gray font-bold rounded-lg text-sm">Cancel·lar</button>
+<button onclick="saveEdit()" class="px-4 py-2 bg-edo-darkblue text-white font-bold rounded-lg text-sm">Desar</button>
+</div>
+</div>
+</div>
+
+<!-- Modal Galeria de Fotos -->
+<div id="photoModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-[150] flex flex-col p-4">
+<div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto overflow-hidden flex flex-col max-h-full">
+<div class="bg-edo-darkblue px-4 py-3 text-white flex justify-between items-center">
+<h3 class="font-bold"><i class="fa-solid fa-images"></i> Galeria de fotos</h3>
+<button onclick="closePhotoModal()" class="text-white text-xl">&times;</button>
+</div>
+<div id="photoModalContent" class="p-4 overflow-y-auto flex-grow bg-slate-50"></div>
+<div class="p-4 border-t border-slate-200 bg-white">
+<button onclick="closePhotoModal()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl w-full shadow-sm transition">Tancar galeria</button>
+</div>
+</div>
+</div>
+
+<!-- Modal Editor Màgic (Retall + Censura) -->
+<div id="magicEditorModal" class="fixed inset-0 bg-slate-950 hidden z-[400] flex flex-col">
+    <div class="flex justify-between items-center p-3 bg-slate-900 text-white shadow-md z-20">
+        <h3 class="font-bold text-sm">✂️ Editor d'imatge</h3>
+        <button onclick="closeMagicEditor()" class="text-white text-2xl leading-none">&times;</button>
+    </div>
+    
+    <div class="flex gap-2 p-3 bg-slate-800 text-sm font-medium z-20 shrink-0">
+        <button id="btnTabCrop" onclick="setMagicTab('crop')" class="flex-1 py-2 rounded-lg bg-edo-lightblue text-slate-900 shadow">Retallar</button>
+        <button id="btnTabBlur" onclick="setMagicTab('blur')" class="flex-1 py-2 rounded-lg bg-slate-700 text-white shadow">Difuminar Cares</button>
+    </div>
+
+    <div class="flex-grow flex items-center justify-center bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfALEAkPwwQG1M+BgYGBgYGFgYGBgYGFgYGBgYGFgYGBgYGFgYGADyKxEB493B2gAAAABJRU5ErkJggg==')] overflow-hidden p-2 relative touch-none">
+        
+        <!-- Contenidor Retall -->
+        <div id="cropContainer" class="w-full h-full relative">
+            <img id="cropImage" class="max-w-full max-h-full block">
+        </div>
+        
+        <!-- Contenidor Blur (Pinzell) -->
+        <div id="blurContainer" class="hidden w-full h-full relative flex items-center justify-center">
+            <canvas id="blurCanvas" class="max-w-full max-h-full shadow-2xl touch-none rounded cursor-crosshair"></canvas>
+            <p id="blurHint" class="absolute top-4 bg-black/60 text-white px-3 py-1 rounded-full text-xs font-bold pointer-events-none transition-opacity">Passa el dit per difuminar cares o noms</p>
+        </div>
+    </div>
+    
+    <div class="bg-slate-900 p-4 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-20 shrink-0">
+        <!-- Controls de Retall -->
+        <div id="cropControls" class="grid grid-cols-4 gap-2 mb-3">
+            <button onclick="setCropRatio(1)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">1:1</button>
+            <button onclick="setCropRatio(4/5)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">4:5</button>
+            <button onclick="setCropRatio(9/16)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">9:16</button>
+            <button onclick="setCropRatio(NaN)" class="py-2 bg-slate-700 text-white rounded font-bold text-xs">Lliure</button>
+        </div>
+        <!-- Controls Blur -->
+        <div id="blurControls" class="hidden flex justify-between items-center mb-3">
+            <button onclick="resetBlur()" class="py-2 px-4 bg-rose-900/50 text-rose-300 rounded font-bold text-xs"><i class="fa-solid fa-rotate-left"></i> Netejar</button>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400">Pinzell:</span>
+                <input type="range" id="blurBrushSize" min="10" max="60" value="30" class="w-24 accent-edo-lightblue">
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="closeMagicEditor()" class="flex-1 py-3 bg-slate-700 text-white font-bold rounded-xl transition">Cancel·lar</button>
+            <button id="btnSaveMagic" onclick="saveMagicEdits()" class="flex-[2] py-3 bg-emerald-600 text-white font-bold rounded-xl transition flex items-center justify-center gap-2"><i class="fa-solid fa-floppy-disk"></i> Aplicar i Desar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal compacte de l'Editor de Marca d'Aigua -->
+<div id="wmEditorModal" class="fixed inset-0 bg-slate-900/95 hidden z-[300] flex flex-col">
+<div class="flex justify-between items-center p-3 bg-edo-darkblue text-white shadow-md z-20">
+<h3 class="font-bold text-sm">🎨 Marca d'aigua</h3>
+<button onclick="closeWmEditor()" class="text-white text-2xl leading-none">&times;</button>
+</div>
+<div class="flex-grow flex items-center justify-center bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYNgfALEAkPwwQG1M+BgYGBgYGFgYGBgYGFgYGBgYGFgYGBgYGFgYGADyKxEB493B2gAAAABJRU5ErkJggg==')] overflow-hidden p-2 relative select-none">
+<div id="wmPreviewWrap" class="relative inline-block shadow-2xl">
+<img id="wmPreviewImg" class="max-w-full max-h-[60vh] object-contain pointer-events-none select-none block">
+
+<div id="wmDraggableLogo" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors" style="left: 85%; top: 85%; transform: translate(-50%, -50%);">
+<img id="wmPreviewLogo" class="pointer-events-none select-none drop-shadow-md h-auto max-w-none">
+</div>
+
+<div id="wmDraggableText" class="absolute flex items-center justify-center cursor-move bg-white/20 border border-white/40 p-1 rounded hover:bg-white/30 transition-colors whitespace-nowrap" style="left: 50%; top: 85%; transform: translate(-50%, -50%);">
+<span id="wmPreviewText" class="font-oswald font-medium pointer-events-none select-none leading-none max-w-none" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.7);"></span>
+</div>
+</div>
+</div>
+<div class="bg-white p-3 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 shrink-0">
+<div class="grid grid-cols-12 gap-2 text-xs items-center">
+<div class="col-span-10">
+<select id="wmEditorSelect" onchange="handleWmEditorSelect()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-edo-lightblue"></select>
+<input type="text" id="wmEditorCustom" oninput="updateWmEditorPreview()" placeholder="Escriu el text aquí..." class="hidden mt-2 w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-edo-lightblue">
+</div>
+<div class="col-span-2 flex justify-end">
+<input type="color" id="wmEditorColor" value="#ffffff" oninput="updateWmEditorPreview()" class="w-8 h-8 rounded cursor-pointer border-0 p-0 shadow-sm">
+</div>
+
+<div class="col-span-6 mt-1">
+<label class="block font-bold text-edo-gray mb-1">Mida logo:</label>
+<input type="range" id="wmEditorLogoSize" min="5" max="100" value="15" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
+</div>
+<div class="col-span-6 mt-1">
+<label class="block font-bold text-edo-gray mb-1">Mida text:</label>
+<input type="range" id="wmEditorTextSize" min="2" max="50" value="8" oninput="updateWmEditorPreview()" class="w-full accent-edo-lightblue">
+</div>
+</div>
+<div class="flex gap-2 mt-3">
+<button onclick="closeWmEditor()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-edo-gray font-bold rounded-xl transition">Cancel·lar</button>
+<button onclick="saveWmSettings()" class="flex-[2] py-2 bg-edo-darkblue hover:bg-[#1a4369] text-white font-bold rounded-xl transition flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Aplicar</button>
+</div>
+</div>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
