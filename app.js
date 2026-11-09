@@ -71,7 +71,7 @@ function makeDraggable(elId) {
     }
     function onMove(e) {
         if(!isDragging) return;
-        if(e.cancelable) e.preventDefault();
+        e.preventDefault();
         const ev = e.touches ? e.touches[0] : e;
         const container = document.getElementById('wmPreviewWrap');
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
@@ -425,10 +425,8 @@ window.openMagicEditor = function(id, index, url) {
             autoCropArea: 1
         });
         
-        magicImgObj = new Image();
-        magicImgObj.crossOrigin = 'anonymous';
-        magicImgObj.src = url;
-        magicImgObj.onload = initBlurTool;
+        magicImgObj = imgEl;
+        initBlurTool();
     };
 };
 
@@ -468,7 +466,12 @@ window.setCropRatio = function(ratio) {
     if(magicCropper) {
         magicCropper.setAspectRatio(ratio);
         const containerData = magicCropper.getContainerData();
-        magicCropper.setCropBoxData({ left: 0, top: 0, width: containerData.width, height: containerData.height });
+        magicCropper.setCropBoxData({
+            left: 0,
+            top: 0,
+            width: containerData.width,
+            height: containerData.height
+        });
     }
 };
 
@@ -492,10 +495,16 @@ function initBlurTool() {
     magicBlurCanvas = document.createElement('canvas');
     magicBlurCanvas.width = w; magicBlurCanvas.height = h;
     const bCtx = magicBlurCanvas.getContext('2d');
-    bCtx.filter = 'blur(15px)';
-    bCtx.drawImage(magicImgObj, 0, 0, w, h);
     
-    // Assignació d'esdeveniments purs de ratolí i tàctil per compatibilitat total mòbil
+    const tinyCanvas = document.createElement('canvas');
+    tinyCanvas.width = Math.max(1, w / 35); 
+    tinyCanvas.height = Math.max(1, h / 35);
+    const tinyCtx = tinyCanvas.getContext('2d');
+    tinyCtx.drawImage(magicImgObj, 0, 0, tinyCanvas.width, tinyCanvas.height);
+    
+    bCtx.imageSmoothingEnabled = true;
+    bCtx.drawImage(tinyCanvas, 0, 0, w, h);
+    
     magicCanvas.addEventListener('mousedown', startBlur);
     magicCanvas.addEventListener('mousemove', drawBlur);
     magicCanvas.addEventListener('mouseup', stopBlur);
@@ -557,10 +566,14 @@ window.saveMagicEdits = async function() {
     
     try {
         let finalBlob = null;
+        
         if(magicMode === 'crop' && magicCropper) {
             const cropData = magicCropper.getCropBoxData();
             if (cropData.width > 0 && cropData.height > 0) {
-                const canvasData = magicCropper.getCroppedCanvas({ imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+                const canvasData = magicCropper.getCroppedCanvas({
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                });
                 finalBlob = await new Promise(res => canvasData.toBlob(res, 'image/jpeg', 0.92));
             } else {
                 showToast("No s'ha detectat cap àrea per retallar", "error");
@@ -591,10 +604,15 @@ window.saveMagicEdits = async function() {
         supabaseClient.storage.from('xarxes_photos').remove([oldFileName]).catch(e=>console.error(e));
         
         showToast("Imatge modificada correctament!");
-        closeMagicEditor(); closePhotoModal(); loadPosts();
+        closeMagicEditor();
+        closePhotoModal();
+        loadPosts();
+        
     } catch(e) {
         showToast("Error en desar la imatge.", "error");
-    } finally { btn.innerHTML = ogHtml; btn.disabled = false; }
+    } finally {
+        btn.innerHTML = ogHtml; btn.disabled = false;
+    }
 };
 
 window.handleWmEditorSelect = function() {
