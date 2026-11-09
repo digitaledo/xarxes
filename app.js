@@ -71,7 +71,7 @@ function makeDraggable(elId) {
     }
     function onMove(e) {
         if(!isDragging) return;
-        e.preventDefault();
+        if(e.cancelable) e.preventDefault();
         const ev = e.touches ? e.touches[0] : e;
         const container = document.getElementById('wmPreviewWrap');
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
@@ -398,8 +398,6 @@ let magicMode = 'crop';
 
 window.openMagicEditor = function(id, index, url) {
     const cleanUrl = url.split('?')[0].toLowerCase();
-    
-    // Validació anti-vídeos
     if (cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.webm')) { 
         showToast("No es pot editar un arxiu de vídeo.", "error"); 
         return; 
@@ -469,19 +467,16 @@ window.setMagicTab = function(mode) {
 window.setCropRatio = function(ratio) {
     if(magicCropper) {
         magicCropper.setAspectRatio(ratio);
-        
         const containerData = magicCropper.getContainerData();
-        magicCropper.setCropBoxData({
-            left: 0,
-            top: 0,
-            width: containerData.width,
-            height: containerData.height
-        });
+        magicCropper.setCropBoxData({ left: 0, top: 0, width: containerData.width, height: containerData.height });
     }
 };
 
 function initBlurTool() {
-    magicCanvas = document.getElementById('blurCanvas');
+    const oldCanvas = document.getElementById('blurCanvas');
+    const newCanvas = oldCanvas.cloneNode(true);
+    oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+    magicCanvas = newCanvas;
     magicCtx = magicCanvas.getContext('2d');
     
     const MAX_DIM = 1200;
@@ -500,28 +495,49 @@ function initBlurTool() {
     bCtx.filter = 'blur(15px)';
     bCtx.drawImage(magicImgObj, 0, 0, w, h);
     
-    magicCanvas.addEventListener('pointerdown', startBlur);
-    magicCanvas.addEventListener('pointermove', drawBlur);
-    magicCanvas.addEventListener('pointerup', stopBlur);
-    magicCanvas.addEventListener('pointerout', stopBlur);
+    // Assignació d'esdeveniments purs de ratolí i tàctil per compatibilitat total mòbil
+    magicCanvas.addEventListener('mousedown', startBlur);
+    magicCanvas.addEventListener('mousemove', drawBlur);
+    magicCanvas.addEventListener('mouseup', stopBlur);
+    magicCanvas.addEventListener('mouseleave', stopBlur);
+    
+    magicCanvas.addEventListener('touchstart', startBlur, {passive: false});
+    magicCanvas.addEventListener('touchmove', drawBlur, {passive: false});
+    magicCanvas.addEventListener('touchend', stopBlur);
+    magicCanvas.addEventListener('touchcancel', stopBlur);
 }
 
-window.resetBlur = function() { initBlurTool(); };
+window.resetBlur = function() { 
+    if(magicCtx && magicImgObj) {
+        magicCtx.drawImage(magicImgObj, 0, 0, magicCanvas.width, magicCanvas.height);
+    }
+};
 
 function startBlur(e) {
     if(magicMode !== 'blur') return;
+    if(e.cancelable) e.preventDefault();
     isBlurring = true;
     drawBlur(e);
 }
 function stopBlur() { isBlurring = false; }
 function drawBlur(e) {
     if(!isBlurring) return;
-    e.preventDefault();
+    if(e.cancelable) e.preventDefault();
+    
     const rect = magicCanvas.getBoundingClientRect();
     const scaleX = magicCanvas.width / rect.width;
     const scaleY = magicCanvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    }
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
     
     const brushSize = parseInt(document.getElementById('blurBrushSize').value) * scaleX;
     
@@ -541,14 +557,10 @@ window.saveMagicEdits = async function() {
     
     try {
         let finalBlob = null;
-        
         if(magicMode === 'crop' && magicCropper) {
             const cropData = magicCropper.getCropBoxData();
             if (cropData.width > 0 && cropData.height > 0) {
-                const canvasData = magicCropper.getCroppedCanvas({
-                    imageSmoothingEnabled: true,
-                    imageSmoothingQuality: 'high'
-                });
+                const canvasData = magicCropper.getCroppedCanvas({ imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
                 finalBlob = await new Promise(res => canvasData.toBlob(res, 'image/jpeg', 0.92));
             } else {
                 showToast("No s'ha detectat cap àrea per retallar", "error");
@@ -579,15 +591,10 @@ window.saveMagicEdits = async function() {
         supabaseClient.storage.from('xarxes_photos').remove([oldFileName]).catch(e=>console.error(e));
         
         showToast("Imatge modificada correctament!");
-        closeMagicEditor();
-        closePhotoModal();
-        loadPosts();
-        
+        closeMagicEditor(); closePhotoModal(); loadPosts();
     } catch(e) {
         showToast("Error en desar la imatge.", "error");
-    } finally {
-        btn.innerHTML = ogHtml; btn.disabled = false;
-    }
+    } finally { btn.innerHTML = ogHtml; btn.disabled = false; }
 };
 
 window.handleWmEditorSelect = function() {
